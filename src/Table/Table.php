@@ -25,51 +25,51 @@ abstract class Table implements TableInterface
       \JDZ\Utilities\Traits\Set, 
       \JDZ\Utilities\Traits\Ns;
   
-	/**
+  /**
    * Database instance
    * 
    * @var    DatabaseInterface
-	 */
-	protected $db;
+   */
+  protected $db;
   
-	/**
+  /**
    * Table name
    * 
    * @var    string
-	 */
-	protected $tbl;
+   */
+  protected $tbl;
   
-	/**
+  /**
    * Table short name (with no prefix)
    * 
    * @var    string
-	 */
-	protected $tbl_name;
+   */
+  protected $tbl_name;
   
-	/**
+  /**
    * Table primary key
    * 
    * @var    string
-	 */
-	protected $tbl_key;
+   */
+  protected $tbl_key;
   
   /**
    * Instances
    * 
-	 * @var    array
-	 */
+   * @var    array
+   */
   protected static $instances;
   
-	/**
-	 * Get a table instance
+  /**
+   * Get a table instance
    * 
-	 * @param 	string              $name  The table name
-	 * @param 	DatabaseInterface   $dbo   The database object
-	 * @return 	Table               Table instance clone
-	 * @throws 	TableException
-	 */
-	public static function getInstance($name, DatabaseInterface &$dbo)
-	{
+   * @param   string              $name  The table name
+   * @param   DatabaseInterface   $dbo   The database object
+   * @return   Table               Table instance clone
+   * @throws   TableException
+   */
+  public static function getInstance($name, DatabaseInterface &$dbo)
+  {
     if ( empty($name) ){
       throw new TableException('Missing table type');
     }
@@ -82,7 +82,7 @@ abstract class Table implements TableInterface
       self::$instances = [];
     }
     
-		if ( !isset(self::$instances[$name]) ){
+    if ( !isset(self::$instances[$name]) ){
       $Class = self::$NS.ucfirst($name);
       
       if ( !class_exists($Class) ){
@@ -93,15 +93,15 @@ abstract class Table implements TableInterface
     }
     
     return clone self::$instances[$name];
-	}  
+  }  
   
   /** 
    * Select list options
    * 
-   * @param 	string  $tblName    The table name
-   * @param 	string  $valueKey   value field name
-   * @param 	string  $textKey    text field name
-   * @return 	array   The options array of objects
+   * @param   string  $tblName    The table name
+   * @param   string  $valueKey   value field name
+   * @param   string  $textKey    text field name
+   * @return   array   The options array of objects
    */
   public static function getFilterOptions($tblName, $valueKey='id', $textKey='title')
   {
@@ -120,12 +120,12 @@ abstract class Table implements TableInterface
   /**
    * Constructor
    * 
-	 * @param 	string              $name  Table name
-	 * @param 	DatabaseInterface   $dbo   Database object
+   * @param   string              $name  Table name
+   * @param   DatabaseInterface   $dbo   Database object
    */
-	public function __construct($name, DatabaseInterface &$dbo)
-	{
-		$this->db =& $dbo;
+  public function __construct($name, DatabaseInterface &$dbo)
+  {
+    $this->db =& $dbo;
     
     $this->tbl_name = $name;
     
@@ -137,26 +137,26 @@ abstract class Table implements TableInterface
       $this->tbl_key = 'id';
     }
     
-		if ( $fields = $this->getFields() ){ 
-			foreach($fields as $field => $v){
-				if ( !$this->hasField($field) ){
-					$this->{$field} = null;
-				}
-			}
-		}
-	}
+    if ( $fields = $this->getFields() ){ 
+      foreach($fields as $field => $v){
+        if ( !$this->hasField($field) ){
+          $this->{$field} = null;
+        }
+      }
+    }
+  }
   
-	/**
-	 * Magic method to return some protected property values
-	 *
+  /**
+   * Magic method to return some protected property values
+   *
    * Returns null if the property is not set.
    * 
-	 * @param 	string            $name  The name of the property to return
-	 * @return 	string|null       Value or null if the property is not set
-	 * @throw 	RuntimeException  If property is not set
-	 */
-	public function __get($name)
-	{
+   * @param   string            $name  The name of the property to return
+   * @return   string|null       Value or null if the property is not set
+   * @throw   RuntimeException  If property is not set
+   */
+  public function __get($name)
+  {
     switch($name){
       case 'db':
       case 'tbl':
@@ -167,51 +167,51 @@ abstract class Table implements TableInterface
       default:
         throw new RuntimeException('Cannot access/get property ' . __CLASS__ . '::' . $name);
     }
-	}
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function getTblName()
   {
     return $this->tbl_name;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function getTbl()
   {
     return $this->tbl;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function getTblKey()
   {
     return $this->tbl_key;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function filterGetProperties(array $properties=[])
-	{
-		return array_merge($properties, ['db', 'tbl', 'tbl_name', 'tbl_key']);
-	}
+  /**
+   * {@inheritDoc}
+    */
+  public function filterGetProperties(array $properties=[])
+  {
+    return array_merge($properties, ['db', 'tbl', 'tbl_name', 'tbl_key']);
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function rowIsDisabled($id)
   {
     return false;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function getPreviousVersion()
   {
     $this->versionAble(false);
@@ -229,9 +229,9 @@ abstract class Table implements TableInterface
     return $versionNum;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function saveAssociations($right, $left_id, array $right_items, $clear=false, $order=false)
   {
     $query = $this->db->getQuery(true);
@@ -281,66 +281,66 @@ abstract class Table implements TableInterface
     }
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function reset()
-	{
-		// Get the default values for the class from the table.
-		foreach ($this->getFields() as $k => $v){
-			// If the property is not the primary key or private, reset it.
-			if ( $k != $this->tbl_key && (strpos($k, '_') !== 0) ){
-				$this->$k = $v->Default;
-			}
-		}
-	}
+  /**
+   * {@inheritDoc}
+    */
+  public function reset()
+  {
+    // Get the default values for the class from the table.
+    foreach ($this->getFields() as $k => $v){
+      // If the property is not the primary key or private, reset it.
+      if ( $k != $this->tbl_key && (strpos($k, '_') !== 0) ){
+        $this->$k = $v->Default;
+      }
+    }
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function load($keys=null, $reset=true, $clean=true)
-	{
-		if ( empty($keys) ){
-			$keyName  = $this->tbl_key;
-			$keyValue = $this->$keyName;
+  /**
+   * {@inheritDoc}
+    */
+  public function load($keys=null, $reset=true, $clean=true)
+  {
+    if ( empty($keys) ){
+      $keyName  = $this->tbl_key;
+      $keyValue = $this->$keyName;
 
-			if ( empty($keyValue) ){
-				return true;
-			}
+      if ( empty($keyValue) ){
+        return true;
+      }
       
-			$keys = [ $keyName => $keyValue ];
-		}
-		elseif ( !is_array($keys) ){
-			$keys = [ $this->tbl_key => $keys ];
-		}
+      $keys = [ $keyName => $keyValue ];
+    }
+    elseif ( !is_array($keys) ){
+      $keys = [ $this->tbl_key => $keys ];
+    }
 
-		if ( $reset ){
-			$this->reset();
-		}
+    if ( $reset ){
+      $this->reset();
+    }
     
-		$query = $this->db->getQuery(true);
-		$query->select('*');
-		$query->from($this->tbl);
-		$fields = array_keys($this->getProperties());
+    $query = $this->db->getQuery(true);
+    $query->select('*');
+    $query->from($this->tbl);
+    $fields = array_keys($this->getProperties());
     
-		foreach($keys as $field => $value){
-			if ( !in_array($field, $fields) ){
+    foreach($keys as $field => $value){
+      if ( !in_array($field, $fields) ){
         throw new TableException(sprintf('Missing field %s in %s', $field, get_class($this)));
-			}
+      }
       
-			$query->where($this->db->qn($field).'='.$this->db->q($value));
-		}
+      $query->where($this->db->qn($field).'='.$this->db->q($value));
+    }
 
-		$this->db->setQuery($query);
+    $this->db->setQuery($query);
     
     $row = $this->db->loadAssoc();
     
-		if ( empty($row) ){
+    if ( empty($row) ){
       $this->setError(DatabaseHelper::getTranslation('ERROR_EMPTY_ROW'));
       return false;
-		}
+    }
     
-		if ( $this->bind($row) ){
+    if ( $this->bind($row) ){
       if ( $clean ){
         $this->setFieldsTypeByName();
       }
@@ -348,24 +348,24 @@ abstract class Table implements TableInterface
     }
     
     return false;
-	}
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function loadBySlug($slug)
   {
-		$this->slugAble(false);
+    $this->slugAble(false);
     
     return $this->load(['slug'=>$slug]);
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function getByCategory($id_category)
   {
-		$this->categoryAble(false);
+    $this->categoryAble(false);
     
     $query = $this->db->getQuery(true);
     $query->select('id');
@@ -377,76 +377,76 @@ abstract class Table implements TableInterface
     return $items;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function save(array $src, array $ignore=[])
-	{
+  /**
+   * {@inheritDoc}
+    */
+  public function save(array $src, array $ignore=[])
+  {
     $oldValues=[];
     
-		if ( !$this->bind($src, $ignore, $oldValues) ){
-			return false;
-		}
+    if ( !$this->bind($src, $ignore, $oldValues) ){
+      return false;
+    }
     
     if ( !$this->hasBeenModified($oldValues) ){
       // $this->setError(DatabaseHelper::getTranslation('ERROR_RECORD_UNCHANGED'));
       return true;
     }
     
-		if ( !$this->check() ){
-			return false;
-		}
+    if ( !$this->check() ){
+      return false;
+    }
     
     return ( $this->store() );
-	}
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function bind(array $src, array $ignore=[], array &$oldValues=[])
-	{
-		if ( !is_object($src) && !is_array($src) ){
-			throw new TableException(sprintf('Row bind failed in %', get_class($this)));
-		}
+  /**
+   * {@inheritDoc}
+    */
+  public function bind(array $src, array $ignore=[], array &$oldValues=[])
+  {
+    if ( !is_object($src) && !is_array($src) ){
+      throw new TableException(sprintf('Row bind failed in %', get_class($this)));
+    }
     
-		if ( is_object($src) ){
-			$src = get_object_vars($src);
-		}
+    if ( is_object($src) ){
+      $src = get_object_vars($src);
+    }
 
-		if ( !is_array($ignore) ){
-			$ignore = explode(' ', $ignore);
-		}
+    if ( !is_array($ignore) ){
+      $ignore = explode(' ', $ignore);
+    }
     
-		foreach($this->getProperties() as $k => $v){
+    foreach($this->getProperties() as $k => $v){
       if ( intval($this->id) > 0 ){
         $oldValues[$k] = $this->$k;
       }
       
-			if ( in_array($k, $ignore) || !isset($src[$k]) ){
+      if ( in_array($k, $ignore) || !isset($src[$k]) ){
         continue;
       }
       
       $this->$k = $src[$k];
-		}
+    }
     
-		return true;
-	}
+    return true;
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function delete($pk=null)
-	{
-		$k = $this->tbl_key;
+  {
+    $k = $this->tbl_key;
     
-		if ( $pk === null ){
+    if ( $pk === null ){
       $pk = $this->{$k};
     }
     
-		if ( $pk === null ){
+    if ( $pk === null ){
       $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
       return false;
-		}
+    }
     
     if ( $this->statesAble() ){
       $this->load($pk);
@@ -483,24 +483,24 @@ abstract class Table implements TableInterface
       $this->reorder($this->getReorderConditions());
     }
     
-		return true;
-	}
+    return true;
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function untrash($pk=null)
-	{
-		$k = $this->tbl_key;
+  {
+    $k = $this->tbl_key;
     
-		if ( $pk === null ){
+    if ( $pk === null ){
       $pk = $this->{$k};
     }
     
-		if ( $pk === null ){
+    if ( $pk === null ){
       $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
       return false;
-		}
+    }
     
     if ( $this->statesAble() ){
       $this->load($pk);
@@ -516,23 +516,23 @@ abstract class Table implements TableInterface
     }
     
     return true;
-	}
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function shred($pk=null)
-	{
-		$k = $this->tbl_key;
+  {
+    $k = $this->tbl_key;
     
-		if ( $pk === null ){
+    if ( $pk === null ){
       $pk = $this->{$k};
     }
     
-		if ( $pk === null ){
+    if ( $pk === null ){
       $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
       return false;
-		}
+    }
     
     if ( $this->statesAble() ){
       $this->load($pk);
@@ -550,14 +550,14 @@ abstract class Table implements TableInterface
       }
     }
     
-		return true;
-	}
+    return true;
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function revert($pk, array $data)
-	{
+  {
     if ( !$this->load($pk, true, false) ){
       return false;
     }
@@ -571,27 +571,27 @@ abstract class Table implements TableInterface
     // debugMe($this, 'TABLE')->end();
     
     return $this->store();
-	}
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function publish($pk=null, $state=1)
-	{
-		$this->publishingAble(false);
+  /**
+   * {@inheritDoc}
+    */
+  public function publish($pk=null, $state=1)
+  {
+    $this->publishingAble(false);
     
-		$k = $this->tbl_key;
+    $k = $this->tbl_key;
     
-		if ( empty($pk) ){
+    if ( empty($pk) ){
       $pk = $this->{$k};
     }
     
-		if ( $pk === null ){
+    if ( $pk === null ){
       $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
       return false;
-		}
+    }
     
-		$state = (int)$state;
+    $state = (int)$state;
     
     if ( $this->statesAble() ){
       if ( $this->deleted !== '' && $this->deleted !== $this->db->nullDate ){
@@ -613,21 +613,21 @@ abstract class Table implements TableInterface
     $this->db->setQuery($query);
     $this->db->execute();
     
-		if ( $this->$k === $pk ){
-			$this->published = $state;
-		}
+    if ( $this->$k === $pk ){
+      $this->published = $state;
+    }
     
-		return true;
-	}
+    return true;
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function changeorder($pk, $to)
-	{
-		$this->orderingAble(false);
+  /**
+   * {@inheritDoc}
+    */
+  public function changeorder($pk, $to, $minOrder=1, $maxOrder=0)
+  {
+    $this->orderingAble(false);
     
-		$k = $this->tbl_key;
+    $k = $this->tbl_key;
     
     if ( $pk === null ){
       $pk = $this->{$k};
@@ -637,88 +637,62 @@ abstract class Table implements TableInterface
       return false;
     }
     
-    $to    = (int)$to;
-    $from  = (int)$this->ordering;
+    $to        = (int)$to;
+    $from      = (int)$this->ordering;
+    $direction = $from > $to ? 'down' : 'up';
     
     if ( $from === $to ){
       return true;
     }
     
-    $where     = $this->getReorderConditions();
-    $direction = $from > $to ? 'down' : 'up';
+    $where = $this->getReorderConditions();
+    $where[] = $k.' != '.$pk;
+    $where[] = 'ordering <> 0';
+    if ( $minOrder && $maxOrder ){
+      $where[] = 'ordering >= '.$minOrder;
+      $where[] = 'ordering <= '.$maxOrder;
+    }
     
-    $this->ordering = $to;
+    $whereBefore = $whereAfter = $where;
+    
+    if ( $direction === 'down' ){
+      $whereBefore[] = 'ordering < '.$to;
+      $whereAfter[]  = 'ordering >= '.$to;
+    }
+    else {
+      $whereBefore[] = 'ordering <= '.$to;
+      $whereAfter[]  = 'ordering > '.$to;
+    }
     
     $itemsBefore = [];
     $itemsAfter  = [];
-    $itemsEnd    = []; // unordered
-    $item = (object)[
-      $k => $pk,
-      'ordering' => $to,
-    ];
     
-    // get items before moved element
+    // get items before the moved element
     $query = $this->db->getQuery(true);
     $query->select($k.', ordering');
     $query->from($this->tbl);
-    if ( $where ){
-      $query->where($where);
-    }
-    $query->where($k.' != '.$pk);
-    $query->where('ordering <> 0');
-    if ( $direction === 'down' ){
-      $query->where('ordering < '.$to);
-    }
-    else {
-      $query->where('ordering <= '.$to);
-    }
+    $query->where($whereBefore);
     $query->order('ordering ASC');
-    
-
     $this->db->setQuery($query);
     $itemsBefore = $this->db->loadObjectList();
     
-    // get items after moved element
+    // get items after the moved element
     $query = $this->db->getQuery(true);
     $query->select($k.', ordering');
     $query->from($this->tbl);
-    if ( $where ){
-      $query->where($where);
-    }
-    $query->where($k.' != '.$pk);
-    $query->where('ordering <> 0');
-    if ( $direction === 'down' ){
-      $query->where('ordering >= '.$to);
-    }
-    else {
-      $query->where('ordering > '.$to);
-    }
+    $query->where($whereAfter);
     $query->order('ordering ASC');
-    
     $this->db->setQuery($query);
     $itemsAfter = $this->db->loadObjectList();
     
-    // IN CASE get items with no order
-    $query = $this->db->getQuery(true);
-    $query->select($k.', ordering');
-    $query->from($this->tbl);
-    if ( $where ){
-      $query->where($where);
-    }
-    $query->where($k.' != '.$pk); // really just in case
-    $query->where('ordering = 0');
-    $query->order($k.' ASC');
-    
-    $this->db->setQuery($query);
-    $itemsEnd = $this->db->loadObjectList();
-    
     // reorder
-    $i=1;
+    $i=$minOrder;
+    
     foreach($itemsBefore as $row){
       $query = $this->db->getQuery(true);
       $query->update($this->tbl);
       $query->set('ordering='.$i);
-      $query->where($k.'='.$this->db->q($row->$k));
+      $query->where($k.'='.$row->{$k});
       $this->db->setQuery($query);
       $this->db->execute();
       $i++;
@@ -728,7 +702,7 @@ abstract class Table implements TableInterface
     $query = $this->db->getQuery(true);
     $query->update($this->tbl);
     $query->set('ordering='.$i);
-    $query->where($k.'='.$this->db->q($item->$k));
+    $query->where($k.'='.$pk);
     $this->db->setQuery($query);
     $this->db->execute();
     $i++;
@@ -737,33 +711,26 @@ abstract class Table implements TableInterface
       $query = $this->db->getQuery(true);
       $query->update($this->tbl);
       $query->set('ordering='.$i);
-      $query->where($k.'='.$this->db->q($row->$k));
+      $query->where($k.'='.$row->{$k});
       $this->db->setQuery($query);
       $this->db->execute();
       $i++;
     }
     
-    foreach($itemsEnd as $row){
-      $query = $this->db->getQuery(true);
-      $query->update($this->tbl);
-      $query->set('ordering='.$i);
-      $query->where($k.'='.$this->db->q($row->$k));
-      $this->db->setQuery($query);
-      $this->db->execute();
-      $i++;
-    }
+    // set the new item order
+    $this->ordering = $to;
     
     return true;
-	}
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function reorder($where='')
-	{
-		$this->orderingAble(false);
+  /**
+   * {@inheritDoc}
+    */
+  public function reorder($where='')
+  {
+    $this->orderingAble(false);
     
-		$k = $this->tbl_key;
+    $k = $this->tbl_key;
     
     $query = $this->db->getQuery(true);
     $query->select($this->tbl_key . ', ordering');
@@ -791,12 +758,12 @@ abstract class Table implements TableInterface
       }
     }
     
-		return true;
-	}
+    return true;
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function trashedItems(array $conditions=[])
   {
     $conditions[] = $this->db->qn('deleted').' != '.$this->db->q($this->db->nullDate);
@@ -811,12 +778,12 @@ abstract class Table implements TableInterface
     return (array)$this->db->loadColumn();
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function getNextOrder($where = '')
-	{
-		$this->orderingAble(false);
+  /**
+   * {@inheritDoc}
+    */
+  public function getNextOrder($where = '')
+  {
+    $this->orderingAble(false);
     
     $query = $this->db->getQuery(true);
     $query->select('MAX(ordering)');
@@ -829,20 +796,20 @@ abstract class Table implements TableInterface
     $this->db->setQuery($query);
     $max = (int) $this->db->loadResult();
     
-		return ($max + 1);
-	}
+    return ($max + 1);
+  }
 
-	/**
-	 * {@inheritDoc}
- 	 */
-	public function getReorderConditions()
-	{
-		return [];
-	}
+  /**
+   * {@inheritDoc}
+    */
+  public function getReorderConditions()
+  {
+    return [];
+  }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function getDefaultOrdering($prefix='a.')
   {
     if ( $this->orderingAble() ){
@@ -851,9 +818,9 @@ abstract class Table implements TableInterface
     return $prefix.$this->tbl_key;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function checkTitleUnique($id, $title, array $conditions=[])
   {
     $conditions[] = $this->db->qn('title').'='.$this->db->q($title);
@@ -879,9 +846,9 @@ abstract class Table implements TableInterface
     return true;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function checkSlugUnique($id, $slug, array $conditions=[])
   {
     $this->slugAble();
@@ -909,9 +876,9 @@ abstract class Table implements TableInterface
     return true;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function hasField($fields)
   {
     if ( !is_array($fields) ){
@@ -932,9 +899,9 @@ abstract class Table implements TableInterface
    * 
    * Used for automatic slug creation and checkup
    * 
-   * @param 	bool                     False to throw an exception if the functionnality 
+   * @param   bool                     False to throw an exception if the functionnality 
    *                                  is not available for the current table object.
-   * @return 	bool                    True if the functionnality is supported.
+   * @return   bool                    True if the functionnality is supported.
    */
   public function slugAble($return=true)
   {  
@@ -945,12 +912,30 @@ abstract class Table implements TableInterface
       throw new TableException('Table doesn\'t support slug ['.get_class($this).']');
     }
     
-		return $able;
+    return $able;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /** 
+   * Does table include a category
+   * 
+   * @param   bool    False to throw an exception if the functionnality 
+   *                    is not available for the current table object.
+   * @return   bool   True if the functionnality is supported.
+   */
+  public function categorizeAble($return=true)
+  {  
+    $able = $this->hasField(['id_category']);
+    
+    if ( $return === false && !$able ){
+      throw new TableException('Table doesn\'t support categories ['.get_class($this).']');
+    }
+    
+    return $able;
+  }
+  
+  /**
+   * {@inheritDoc}
+    */
   public function statesAble($return=true)
   {  
     $able = $this->hasField('created');
@@ -965,24 +950,24 @@ abstract class Table implements TableInterface
       throw new TableException('Table doesn\'t support states ['.get_class($this).']');
     }
     
-		return $able;
+    return $able;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function publishingAble($return=true)
   {
     $able = $this->hasField('published');
     if ( $return === false && !$able ){
       throw new TableException('Table doesn\'t support publishing ['.get_class($this).']');
     }
-		return $able;
+    return $able;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function orderingAble($return=true)
   {
     $able = $this->hasField('ordering');
@@ -990,13 +975,13 @@ abstract class Table implements TableInterface
     if ( $return === false && !$able ){
       throw new TableException('Table doesn\'t support ordering ['.get_class($this).']');
     }
-		
+    
     return $able;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function categoryAble($return=true)
   {  
     $able = $this->hasField('id_category');
@@ -1005,12 +990,12 @@ abstract class Table implements TableInterface
       throw new TableException('Table doesn\'t support categories ['.get_class($this).']');
     }
     
-		return $able;
+    return $able;
   }
   
-	/**
-	 * {@inheritDoc}
- 	 */
+  /**
+   * {@inheritDoc}
+    */
   public function versionAble($return=true)
   {  
     $able = $this->hasField('version');
@@ -1019,14 +1004,14 @@ abstract class Table implements TableInterface
       throw new TableException('Table doesn\'t support version ['.get_class($this).']');
     }
     
-		return $able;
+    return $able;
   }
   
   /** 
    * Chec if the record has been modified.
    * 
-   * @param 	array     $oldValues  Key/Value pairs of old property values 
-   * @return 	bool      True for a new record or if no modifications were found.
+   * @param   array     $oldValues  Key/Value pairs of old property values 
+   * @return   bool      True for a new record or if no modifications were found.
    */
   protected function hasBeenModified(array $oldValues)
   {
@@ -1036,7 +1021,7 @@ abstract class Table implements TableInterface
     
     $props = $this->getProperties();
     
-		foreach($props as $k => $v){
+    foreach($props as $k => $v){
       if ( isset($oldValues[$k]) && $oldValues[$k] == $v ){
         unset($props[$k]);
         continue;
@@ -1045,15 +1030,15 @@ abstract class Table implements TableInterface
     
     return ( !empty($props) > 0 ); 
   }
-	
+  
   /** 
    * Perform needed checkups 
    * 
-   * @param 	bool  $beenModified Has the record been modified ?
-   * @return 	bool  True if the record was modified and must be stored.
+   * @param   bool  $beenModified Has the record been modified ?
+   * @return   bool  True if the record was modified and must be stored.
    */
-	protected function check()
-	{
+  protected function check()
+  {
     if ( $this->slugAble() ){
       if ( !$this->checkTitleUnique($this->id, $this->title) ){
         return false;
@@ -1101,17 +1086,17 @@ abstract class Table implements TableInterface
       $this->version++;
     }
     
-		return true;
-	}
-	
+    return true;
+  }
+  
   /** 
    * Store the record
    * 
-   * @param 	bool  $updateNulls    True to update properties that are null
-   * @return 	bool  True if the record was successfully stored.
+   * @param   bool  $updateNulls    True to update properties that are null
+   * @return   bool  True if the record was successfully stored.
    */
-	protected function store($updateNulls=false)
-	{
+  protected function store($updateNulls=false)
+  {
     $k = $this->tbl_key;
     
     $ret = false;
@@ -1132,42 +1117,42 @@ abstract class Table implements TableInterface
     }
     
     return false;
-	}
+  }
   
   /** 
    * Get the object fields from database table columns.
    * 
-   * @return 	array       The list of table properties.
+   * @return   array       The list of table properties.
    */
-	protected function getFields()
-	{
-		static $cache;
+  protected function getFields()
+  {
+    static $cache;
 
-		if ( !isset($cache) ){
+    if ( !isset($cache) ){
       $cache = [];
     }
     
-		if ( !isset($cache[$this->tbl]) ){
-			$fields = $this->db->getTableColumns($this->tbl, false);
+    if ( !isset($cache[$this->tbl]) ){
+      $fields = $this->db->getTableColumns($this->tbl, false);
       
-			if ( empty($fields) ){
-				throw new TableException('Table columns not found');
-			}
+      if ( empty($fields) ){
+        throw new TableException('Table columns not found');
+      }
       
-			$cache[$this->tbl] = $fields;
-		}
+      $cache[$this->tbl] = $fields;
+    }
     
-		return $cache[$this->tbl];
-	}
+    return $cache[$this->tbl];
+  }
   
-  /*
+  /**
    * Set data type for known fields.
    * 
-   * @return 	The typed value.
+   * @return   The typed value.
    */
   protected function setFieldsTypeByName()
   {
-		foreach($this->getProperties() as $k => $v){
+    foreach($this->getProperties() as $k => $v){
       switch($k){
         case 'id':
         case 'version':
@@ -1195,15 +1180,15 @@ abstract class Table implements TableInterface
   
   
   /** @deprecated */
-	public function move($delta, $where='')
-	{
-		$this->orderingAble(false);
+  public function move($delta, $where='')
+  {
+    $this->orderingAble(false);
     
-		if ( empty($delta) ){
-			return true;
-		}
+    if ( empty($delta) ){
+      return true;
+    }
 
-		$k = $this->tbl_key;
+    $k = $this->tbl_key;
     
     $query = $this->db->getQuery(true);
     
@@ -1252,6 +1237,6 @@ abstract class Table implements TableInterface
       $this->db->execute();
     }
     
-		return true;
-	}
+    return true;
+  }
 }

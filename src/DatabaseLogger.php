@@ -18,48 +18,48 @@ use Monolog\Handler\RotatingFileHandler;
  */
 class DatabaseLogger
 {
-	/**
+  /**
    * Logger name
    * 
    * @var    string
-	 */
+   */
   protected $name;
   
-	/**
+  /**
    * Logger file
    * 
    * @var    string
-	 */
+   */
   protected $logFile;
   
-	/**
+  /**
    * Monolog log importance
    * 
    * @var    int
-	 */
+   */
   protected $importance;
   
-	/**
+  /**
    * Monolog logger
    * 
    * @var    LineFormatter
-	 */
+   */
   protected $formatter;
   
-	/**
+  /**
    * Monolog logger
    * 
    * @var    MonologLogger
-	 */
+   */
   protected $logger;
   
-	/**
-	 * Constructor
-	 *
-	 * @param 	string  $name     The logger name
-	 * @param 	string  $logFile  The logger filepath
-	 * @param 	string  $type     The logget type (error,info) Defaults to info
-	 */
+  /**
+   * Constructor
+   *
+   * @param   string  $name     The logger name
+   * @param   string  $logFile  The logger filepath
+   * @param   string  $type     The logget type (error,info) Defaults to info
+   */
   public function __construct($name, $logFile, $type='info')
   {
     $this->name    = $name;
@@ -70,12 +70,12 @@ class DatabaseLogger
     $this->setLogger();
   }
   
-	/**
-	 * Set logger importance
-	 *
-	 * @param 	string  $type     The logget type (error,info) Defaults to info
-	 * @return 	void
-	 */
+  /**
+   * Set logger importance
+   *
+   * @param   string  $type     The logget type (error,info) Defaults to info
+   * @return   void
+   */
   protected function setImportance($type)
   {
     switch($type){
@@ -90,11 +90,11 @@ class DatabaseLogger
     }
   }
   
-	/**
-	 * Set logger formatter
-	 *
-	 * @return 	void
-	 */
+  /**
+   * Set logger formatter
+   *
+   * @return   void
+   */
   protected function setFormatter()
   {
     $dateFormat = "d/m/Y H:i:s";
@@ -104,11 +104,11 @@ class DatabaseLogger
     $this->formatter = new LineFormatter($output, $dateFormat);
   }
   
-	/**
-	 * Set logger
-	 *
-	 * @return 	void
-	 */
+  /**
+   * Set logger
+   *
+   * @return   void
+   */
   protected function setLogger()
   {
     $stream = new RotatingFileHandler($this->logFile, $this->importance);
@@ -118,11 +118,11 @@ class DatabaseLogger
     $this->logger->pushHandler($stream);
   }
   
-	/**
-	 * Add a entry
-	 *
-	 * @return 	void
-	 */
+  /**
+   * Add a entry
+   *
+   * @return   void
+   */
   public function add($method, $str)
   {
     $str = $this->cleanLine($str);
@@ -132,12 +132,12 @@ class DatabaseLogger
     $this->logger->$method($str);
   }
   
-	/**
-	 * Clean an entry
-	 *
-	 * @param 	string  $line   The raw entry
-	 * @return 	string  The cleaned entry
-	 */
+  /**
+   * Clean an entry
+   *
+   * @param   string  $line   The raw entry
+   * @return   string  The cleaned entry
+   */
   protected static function cleanLine($line)
   {
     $line = trim(preg_replace("/\s+/", " ", $line));
