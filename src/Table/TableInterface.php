@@ -17,13 +17,14 @@ interface TableInterface
   /**
    * Save associations
    * 
-   * @return   string  $right_tbl  Right associated table short name
-   * @return   int     $pk         Left association table record ID
-   * @return   array   $items      Right association table record IDs
-   * @return   bool    $order      True if the associated elements should be ordered
+   * @return  string  $right_tbl   Right associated table short name
+   * @return  int     $pk          Left association table record ID
+   * @return  array   $right_items Right association table record IDs
+   * @return  bool    $clear       True to clear previous records
+   * @return  bool    $order       True if the associated elements should be ordered
    * @return  bool    True if successfull
    */
-  public function saveAssociations($right, $pk, array $items, $order=false);
+  public function saveAssociations($right, $pk, array $right_items, $clear=true, $order=false);
   
   /**
    * Return the table short name
@@ -253,6 +254,15 @@ interface TableInterface
   public function slugAble($return=true);
   
   /** 
+   * Supports categories
+   * 
+   * @param   bool  $return   False to throw an exception if the functionnality
+   *                          is not available for the current table object.
+   * @return   bool  True if the functionnality is supported.
+   */
+  public function categorizeAble($return=true);
+  
+  /** 
    * Does table support dates & user states
    * 
    * @param   bool  $return   False to throw an exception if the functionnality
@@ -278,15 +288,6 @@ interface TableInterface
    * @return   bool  True if the functionnality is supported.
    */
   public function orderingAble($return=true);
-  
-  /** 
-   * Does table include a category
-   * 
-   * @param   bool  $return   False to throw an exception if the functionnality 
-   *                          is not available for the current table object.
-   * @return   bool  True if the functionnality is supported.
-   */
-  public function categoryAble($return=true);
   
   /** 
    * Does table use version

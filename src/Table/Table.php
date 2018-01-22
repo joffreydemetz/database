@@ -10,6 +10,7 @@ namespace JDZ\Database\Table;
 use JDZ\Database\DatabaseInterface;
 use JDZ\Database\DatabaseHelper;
 use JDZ\Database\Exception\TableException;
+use Callisto\Utils\Component\Component as ComponentObject;
 
 use RuntimeException;
 
@@ -232,7 +233,7 @@ abstract class Table implements TableInterface
   /**
    * {@inheritDoc}
     */
-  public function saveAssociations($right, $left_id, array $right_items, $clear=false, $order=false)
+  public function saveAssociations($right, $left_id, array $right_items, $clear=true, $order=false)
   {
     $query = $this->db->getQuery(true);
     
@@ -365,7 +366,7 @@ abstract class Table implements TableInterface
     */
   public function getByCategory($id_category)
   {
-    $this->categoryAble(false);
+    $this->categorizeAble(false);
     
     $query = $this->db->getQuery(true);
     $query->select('id');
@@ -567,8 +568,6 @@ abstract class Table implements TableInterface
     }
     
     $this->id = (int)$pk;
-    
-    // debugMe($this, 'TABLE')->end();
     
     return $this->store();
   }
@@ -804,7 +803,11 @@ abstract class Table implements TableInterface
     */
   public function getReorderConditions()
   {
-    return [];
+    $conditions = [];
+      if ( $this->categorizeAble() ){
+      $conditions[] = 'id_category='.$this->db->q($this->id_category);
+    }
+    return $conditions;
   }
   
   /**
@@ -813,6 +816,10 @@ abstract class Table implements TableInterface
   public function getDefaultOrdering($prefix='a.')
   {
     if ( $this->orderingAble() ){
+      if ( $this->categorizeAble() ){
+        return 'category ASC, '.$prefix.'ordering';
+      }
+      
       return $prefix.'ordering';
     }
     return $prefix.$this->tbl_key;
@@ -894,15 +901,9 @@ abstract class Table implements TableInterface
     return true;
   }
   
-  /** 
-   * Does table include a title and a slug 
-   * 
-   * Used for automatic slug creation and checkup
-   * 
-   * @param   bool                     False to throw an exception if the functionnality 
-   *                                  is not available for the current table object.
-   * @return   bool                    True if the functionnality is supported.
-   */
+  /**
+   * {@inheritDoc}
+    */
   public function slugAble($return=true)
   {  
     // $able = $this->hasField('slug') && $this->hasField('title') );
@@ -915,13 +916,9 @@ abstract class Table implements TableInterface
     return $able;
   }
   
-  /** 
-   * Does table include a category
-   * 
-   * @param   bool    False to throw an exception if the functionnality 
-   *                    is not available for the current table object.
-   * @return   bool   True if the functionnality is supported.
-   */
+  /**
+   * {@inheritDoc}
+    */
   public function categorizeAble($return=true)
   {  
     $able = $this->hasField(['id_category']);
@@ -974,20 +971,6 @@ abstract class Table implements TableInterface
     
     if ( $return === false && !$able ){
       throw new TableException('Table doesn\'t support ordering ['.get_class($this).']');
-    }
-    
-    return $able;
-  }
-  
-  /**
-   * {@inheritDoc}
-    */
-  public function categoryAble($return=true)
-  {  
-    $able = $this->hasField('id_category');
-    
-    if ( $return === false && !$able ){
-      throw new TableException('Table doesn\'t support categories ['.get_class($this).']');
     }
     
     return $able;
@@ -1155,6 +1138,8 @@ abstract class Table implements TableInterface
     foreach($this->getProperties() as $k => $v){
       switch($k){
         case 'id':
+        case 'id_category':
+        case 'parent_id':
         case 'version':
         case 'ordering':
         case 'created_by':
