@@ -10,9 +10,8 @@ namespace JDZ\Database\Table;
 use JDZ\Database\DatabaseInterface;
 use JDZ\Database\DatabaseHelper;
 use JDZ\Database\Exception\TableException;
-use Callisto\Utils\Component\Component as ComponentObject;
-
 use RuntimeException;
+use Exception;
 
 /**
  * Table connector class
@@ -21,11 +20,6 @@ use RuntimeException;
  */
 abstract class Table implements TableInterface
 {
-  use \JDZ\Utilities\Traits\Error,
-      \JDZ\Utilities\Traits\Get,
-      \JDZ\Utilities\Traits\Set, 
-      \JDZ\Utilities\Traits\Ns;
-  
   /**
    * Database instance
    * 
@@ -55,68 +49,18 @@ abstract class Table implements TableInterface
   protected $tbl_key;
   
   /**
-   * Instances
+   * Has been modified
    * 
-   * @var    array
+   * @var    bool
    */
-  protected static $instances;
-  
-  /**
-   * Get a table instance
-   * 
-   * @param   string              $name  The table name
-   * @param   DatabaseInterface   $dbo   The database object
-   * @return   Table               Table instance clone
-   * @throws   TableException
-   */
-  public static function getInstance($name, DatabaseInterface &$dbo)
-  {
-    if ( empty($name) ){
-      throw new TableException('Missing table type');
-    }
-    
-    if ( !isset(self::$NS) ){
-      self::$NS = '\\Database\\Table\\';
-    }
-    
-    if ( !isset(self::$instances) ){
-      self::$instances = [];
-    }
-    
-    if ( !isset(self::$instances[$name]) ){
-      $Class = self::$NS.ucfirst($name);
-      
-      if ( !class_exists($Class) ){
-        throw new TableException('Unrecognized table :: '.$name);
-      }
-      
-      self::$instances[$name] = new $Class($name, $dbo);
-    }
-    
-    return clone self::$instances[$name];
-  }  
+  protected $hasBeenModified;
   
   /** 
-   * Select list options
+   * An array of error messages or Exception objects
    * 
-   * @param   string  $tblName    The table name
-   * @param   string  $valueKey   value field name
-   * @param   string  $textKey    text field name
-   * @return   array   The options array of objects
-   */
-  public static function getFilterOptions($tblName, $valueKey='id', $textKey='title')
-  {
-    $table = Table($tblName);
-    $query = $table->db->getQuery(true);
-    $query->select($valueKey.' AS value, '.$textKey.' AS text');
-    $query->from($table->tbl);
-    $query->order('text ASC');
-    
-    $table->db->setQuery($query);
-    $options = (array)$table->db->loadObjectList();
-    
-    return $options;
-  }
+   * @var   array 
+   */ 
+  protected $errors = [];
   
   /**
    * Constructor
@@ -173,6 +117,14 @@ abstract class Table implements TableInterface
   /**
    * {@inheritDoc}
     */
+  public function getDb()
+  {
+    return $this->db;
+  }
+  
+  /**
+   * {@inheritDoc}
+    */
   public function getTblName()
   {
     return $this->tbl_name;
@@ -195,11 +147,157 @@ abstract class Table implements TableInterface
   }
   
   /**
+   * Returns a property of the object or the default value if the property is not set
+   * 
+   * @param   string  $property  The name of the property
+   * @param   mixed   $default   The default value
+   * @return  mixed   The value of the property
+   */
+  public function get($property, $default=null)
+  {
+    if ( isset($this->{$property}) ){
+      return $this->{$property};
+    }
+    return $default;
+  }
+  
+  /**
+   * Sets a property of the object
+   * 
+   * @param   string  $property  The name of the property
+   * @param   mixed   $value     The value of the property to set
+   * @return  void
+   */
+  public function set($property, $value=null)
+  {
+    $this->{$property} = $value;
+  }
+  
+  /**
+   * Returns an associative array of object properties
+   *
+   * @return  array
+   */
+  public function getProperties()
+  {
+    $vars = get_object_vars($this);
+    
+    foreach($vars as $key => $value){
+      if ( '_' === substr($key, 0, 1) ){
+        unset($vars[$key]);
+        continue;
+      }
+      
+      if ( in_array($key, $this->filterGetProperties(['db', 'tbl', 'tbl_name', 'tbl_key', 'hasBeenModified', 'errors'])) ){
+        unset($vars[$key]);
+        continue;
+      }
+    }
+    
+    return $vars;
+  }
+  
+  /**
+   * Set the object properties based on a named array/hash.
+   *
+   * @param   mixed  $properties  Either an associative array or another object.
+   * @return   boolean
+   */
+  public function setProperties($properties)
+  {
+    if ( is_array($properties) || is_object($properties) ){
+      foreach((array)$properties as $k => $v){
+        $this->set($k, $v);
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Get an error message
+   *
+   * @param   int      $i         Option error index
+   * @param   boolean  $toString  Indicates if Exception instances should return the error message or the exception object
+   * @return  string   Error message
+   */
+  public function getError($i=null, $toString=true)
+  {
+    if ( $i === null ){
+      $error = end($this->errors);
+    }
+    else {
+      if ( !array_key_exists($i, $this->errors) ){
+        return false;
+      }
+      
+      $error = $this->errors[$i];
+    }
+    
+    if ( $error instanceof Exception ){
+      return $error->getMessage();
+    }
+    
+    return $error;
+  }
+  
+  /**
+   * Add an error message
+   *
+   * @param   mixed  $error  Error message or exception instance
+   * @return  void
+   */
+  public function setError($error)
+  {
+    if ( !($error instanceof Exception) && is_string($error) ){
+      $error = new Exception($error);
+    }
+    
+    array_push($this->errors, $error);
+  }
+  
+  /**
+   * Return all errors, if any, as a unique string.
+   * 
+   * @param   string   $separator     The separator.
+   * @return   string   String containing all the errors separated by the specified sequence.
+   */
+  public function getErrorsAsString($separator='<br />')
+  {
+    $errors = $this->errors;
+    
+    foreach($errors as &$error){
+      $error = $error->getMessage();
+    }
+    
+    return implode($separator, $errors);
+  }
+  
+  /**
+   * Return all errors, if any.
+   * 
+   * @return   array  Array of error messages or Exception instances.
+   */
+  public function getErrors()
+  {
+    return $this->errors;
+  }
+  
+  /**
+   * {@inheritDoc}
+    */
+  public function recordWasModified()
+  {
+    return $this->hasBeenModified;
+  }
+  
+  /**
    * {@inheritDoc}
     */
   public function filterGetProperties(array $properties=[])
   {
-    return array_merge($properties, ['db', 'tbl', 'tbl_name', 'tbl_key']);
+    return $properties;
   }
   
   /**
@@ -1011,7 +1109,9 @@ abstract class Table implements TableInterface
       }
     }
     
-    return ( !empty($props) > 0 ); 
+    $this->hasBeenModified = ( !empty($props) > 0 );
+    
+    return $this->hasBeenModified; 
   }
   
   /** 

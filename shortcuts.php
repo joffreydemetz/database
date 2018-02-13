@@ -19,15 +19,3 @@ function DatabaseTranslate($strings, $default=false)
   \JDZ\Database\DatabaseHelper::setTranslations($strings);
   \JDZ\Database\DatabaseHelper::setTranslationDefaultValue($default);
 }
-
-/**
- * Set the tables namespace
- * 
- * @param   string    $name   Namespace
- * @return  void
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
- */
-function TableNS($ns)
-{
-  \JDZ\Database\Table\Table::setNamespace($ns);
-}
