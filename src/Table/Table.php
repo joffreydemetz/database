@@ -10,6 +10,7 @@ namespace JDZ\Database\Table;
 use JDZ\Database\DatabaseInterface;
 use JDZ\Database\DatabaseHelper;
 use JDZ\Database\Exception\TableException;
+use JDZ\Utilities\DataObject;
 use RuntimeException;
 use Exception;
 
@@ -81,7 +82,9 @@ abstract class Table implements TableInterface
     if ( !isset($this->tbl_key) ){
       $this->tbl_key = 'id';
     }
-    
+    // if ( $this->tbl_name === 'menu' ){
+    // debugMe(get_object_vars($this))->end();
+    // }
     if ( $fields = $this->getFields() ){ 
       foreach($fields as $field => $v){
         if ( !$this->hasField($field) ){
@@ -104,19 +107,32 @@ abstract class Table implements TableInterface
   {
     switch($name){
       case 'db':
-      case 'tbl':
+        return $this->getDb();
+      
       case 'tbl_name':
+        return $this->getTblName();
+      
+      case 'tbl':
+        return $this->getTbl();
+      
       case 'tbl_key':
-        return isset($this->{$name}) ? $this->{$name} : null;
+        return $this->getTblKey();
+      
+      case 'hasBeenModified':
+        return $this->recordWasModified();
+      
+      case 'errors':
+        return $this->getErrors();
       
       default:
+        // $this->get($name);
         throw new RuntimeException('Cannot access/get property ' . __CLASS__ . '::' . $name);
     }
   }
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getDb()
   {
     return $this->db;
@@ -124,7 +140,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getTblName()
   {
     return $this->tbl_name;
@@ -132,7 +148,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getTbl()
   {
     return $this->tbl;
@@ -140,43 +156,29 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getTblKey()
   {
     return $this->tbl_key;
   }
   
   /**
-   * Returns a property of the object or the default value if the property is not set
-   * 
-   * @param   string  $property  The name of the property
-   * @param   mixed   $default   The default value
-   * @return  mixed   The value of the property
+   * {@inheritDoc}
    */
-  public function get($property, $default=null)
+  public function setProperties($properties)
   {
-    if ( isset($this->{$property}) ){
-      return $this->{$property};
+    if ( is_array($properties) || is_object($properties) ){
+      foreach((array)$properties as $k => $v){
+        $this->set($k, $v);
+      }
+      return true;
     }
-    return $default;
+    
+    return false;
   }
-  
+
   /**
-   * Sets a property of the object
-   * 
-   * @param   string  $property  The name of the property
-   * @param   mixed   $value     The value of the property to set
-   * @return  void
-   */
-  public function set($property, $value=null)
-  {
-    $this->{$property} = $value;
-  }
-  
-  /**
-   * Returns an associative array of object properties
-   *
-   * @return  array
+   * {@inheritDoc}
    */
   public function getProperties()
   {
@@ -198,29 +200,46 @@ abstract class Table implements TableInterface
   }
   
   /**
-   * Set the object properties based on a named array/hash.
-   *
-   * @param   mixed  $properties  Either an associative array or another object.
-   * @return   boolean
+   * {@inheritDoc}
    */
-  public function setProperties($properties)
+  public function set($field, $value=null)
   {
-    if ( is_array($properties) || is_object($properties) ){
-      foreach((array)$properties as $k => $v){
-        $this->set($k, $v);
-      }
-      return true;
-    }
-
-    return false;
+    $this->{$field} = $value;
   }
-
+  
   /**
-   * Get an error message
-   *
-   * @param   int      $i         Option error index
-   * @param   boolean  $toString  Indicates if Exception instances should return the error message or the exception object
-   * @return  string   Error message
+   * {@inheritDoc}
+   */
+  public function get($field, $default=null)
+  {
+    if ( isset($this->{$field}) ){
+      return $this->{$field};
+    }
+    return $default;
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  public function setError($error)
+  {
+    if ( !($error instanceof Exception) && is_string($error) ){
+      $error = new Exception($error);
+    }
+    
+    array_push($this->errors, $error);
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  public function getErrors()
+  {
+    return $this->errors;
+  }
+  
+  /**
+   * {@inheritDoc}
    */
   public function getError($i=null, $toString=true)
   {
@@ -243,27 +262,9 @@ abstract class Table implements TableInterface
   }
   
   /**
-   * Add an error message
-   *
-   * @param   mixed  $error  Error message or exception instance
-   * @return  void
+   * {@inheritDoc}
    */
-  public function setError($error)
-  {
-    if ( !($error instanceof Exception) && is_string($error) ){
-      $error = new Exception($error);
-    }
-    
-    array_push($this->errors, $error);
-  }
-  
-  /**
-   * Return all errors, if any, as a unique string.
-   * 
-   * @param   string   $separator     The separator.
-   * @return   string   String containing all the errors separated by the specified sequence.
-   */
-  public function getErrorsAsString($separator='<br />')
+  public function getErrorsAsString($glue='<br />')
   {
     $errors = $this->errors;
     
@@ -271,30 +272,12 @@ abstract class Table implements TableInterface
       $error = $error->getMessage();
     }
     
-    return implode($separator, $errors);
+    return implode($glue, $errors);
   }
   
   /**
-   * Return all errors, if any.
-   * 
-   * @return   array  Array of error messages or Exception instances.
+   * {@inheritDoc}
    */
-  public function getErrors()
-  {
-    return $this->errors;
-  }
-  
-  /**
-   * {@inheritDoc}
-    */
-  public function recordWasModified()
-  {
-    return $this->hasBeenModified;
-  }
-  
-  /**
-   * {@inheritDoc}
-    */
   public function filterGetProperties(array $properties=[])
   {
     return $properties;
@@ -302,7 +285,15 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
+  public function recordWasModified()
+  {
+    return $this->hasBeenModified;
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
   public function rowIsDisabled($id)
   {
     return false;
@@ -310,7 +301,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getPreviousVersion()
   {
     $this->versionAble(false);
@@ -330,7 +321,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function saveAssociations($right, $left_id, array $right_items, $clear=true, $order=false)
   {
     $query = $this->db->getQuery(true);
@@ -382,7 +373,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function reset()
   {
     // Get the default values for the class from the table.
@@ -396,7 +387,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function load($keys=null, $reset=true, $clean=true)
   {
     if ( empty($keys) ){
@@ -412,26 +403,25 @@ abstract class Table implements TableInterface
     elseif ( !is_array($keys) ){
       $keys = [ $this->tbl_key => $keys ];
     }
-
+    
     if ( $reset ){
       $this->reset();
     }
     
+    $fields = array_keys($this->getProperties());
+    
     $query = $this->db->getQuery(true);
     $query->select('*');
     $query->from($this->tbl);
-    $fields = array_keys($this->getProperties());
     
     foreach($keys as $field => $value){
       if ( !in_array($field, $fields) ){
         throw new TableException(sprintf('Missing field %s in %s', $field, get_class($this)));
       }
-      
       $query->where($this->db->qn($field).'='.$this->db->q($value));
     }
 
     $this->db->setQuery($query);
-    
     $row = $this->db->loadAssoc();
     
     if ( empty($row) ){
@@ -440,9 +430,9 @@ abstract class Table implements TableInterface
     }
     
     if ( $this->bind($row) ){
-      if ( $clean ){
+      // if ( $clean ){
         $this->setFieldsTypeByName();
-      }
+      // }
       return true;
     }
     
@@ -451,7 +441,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function loadBySlug($slug)
   {
     $this->slugAble(false);
@@ -461,7 +451,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getByCategory($id_category)
   {
     $this->categorizeAble(false);
@@ -478,7 +468,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function save(array $src, array $ignore=[])
   {
     $oldValues=[];
@@ -501,7 +491,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function bind(array $src, array $ignore=[], array &$oldValues=[])
   {
     if ( !is_object($src) && !is_array($src) ){
@@ -518,22 +508,24 @@ abstract class Table implements TableInterface
     
     foreach($this->getProperties() as $k => $v){
       if ( intval($this->id) > 0 ){
-        $oldValues[$k] = $this->$k;
+        $oldValues[$k] = $this->get($k);
       }
       
       if ( in_array($k, $ignore) || !isset($src[$k]) ){
         continue;
       }
       
-      $this->$k = $src[$k];
+      $this->set($k, $src[$k]);
     }
+    
+    $this->setFieldsTypeByName();
     
     return true;
   }
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function delete($pk=null)
   {
     $k = $this->tbl_key;
@@ -587,7 +579,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function untrash($pk=null)
   {
     $k = $this->tbl_key;
@@ -619,7 +611,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function shred($pk=null)
   {
     $k = $this->tbl_key;
@@ -654,7 +646,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function revert($pk, array $data)
   {
     if ( !$this->load($pk, true, false) ){
@@ -672,7 +664,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function publish($pk=null, $state=1)
   {
     $this->publishingAble(false);
@@ -719,7 +711,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function changeorder($pk, $to, $minOrder=1, $maxOrder=0)
   {
     $this->orderingAble(false);
@@ -822,7 +814,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function reorder($where='')
   {
     $this->orderingAble(false);
@@ -860,7 +852,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function trashedItems(array $conditions=[])
   {
     $conditions[] = $this->db->qn('deleted').' != '.$this->db->q($this->db->nullDate);
@@ -877,7 +869,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getNextOrder($where = '')
   {
     $this->orderingAble(false);
@@ -898,7 +890,7 @@ abstract class Table implements TableInterface
 
   /**
    * {@inheritDoc}
-    */
+   */
   public function getReorderConditions()
   {
     $conditions = [];
@@ -910,7 +902,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function getDefaultOrdering($prefix='a.')
   {
     if ( $this->orderingAble() ){
@@ -925,7 +917,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function checkTitleUnique($id, $title, array $conditions=[])
   {
     $conditions[] = $this->db->qn('title').'='.$this->db->q($title);
@@ -953,7 +945,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function checkSlugUnique($id, $slug, array $conditions=[])
   {
     $this->slugAble();
@@ -983,7 +975,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function hasField($fields)
   {
     if ( !is_array($fields) ){
@@ -1001,7 +993,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function slugAble($return=true)
   {  
     // $able = $this->hasField('slug') && $this->hasField('title') );
@@ -1016,7 +1008,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function categorizeAble($return=true)
   {  
     $able = $this->hasField(['id_category']);
@@ -1030,7 +1022,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function statesAble($return=true)
   {  
     $able = $this->hasField('created');
@@ -1050,7 +1042,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function publishingAble($return=true)
   {
     $able = $this->hasField('published');
@@ -1062,7 +1054,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function orderingAble($return=true)
   {
     $able = $this->hasField('ordering');
@@ -1076,7 +1068,7 @@ abstract class Table implements TableInterface
   
   /**
    * {@inheritDoc}
-    */
+   */
   public function versionAble($return=true)
   {  
     $able = $this->hasField('version');
@@ -1137,9 +1129,9 @@ abstract class Table implements TableInterface
       $this->ordering = $this->getNextOrder($conditions);
     }
     
-    if ( $this->publishingAble() ){
-      $this->published = (int)$this->published;
-    }
+    // if ( $this->publishingAble() ){
+      // $this->published = (int)$this->published;
+    // }
     
     if ( $this->statesAble() ){
       $user = $this->db->Uid;
@@ -1147,10 +1139,13 @@ abstract class Table implements TableInterface
       if ( empty($this->id) ){
         $this->created    = $this->db->now; 
         $this->created_by = $this->db->Uid; 
+        
+        // $this->modified   = $this->db->nullDate;
+        // $this->deleted    = $this->db->nullDate;
       }
       else {
-        $this->created     = null; 
-        $this->created_by  = null;
+        // $this->created     = null; 
+        // $this->created_by  = null;
         
         $this->modified    = $this->db->now; 
         $this->modified_by = $this->db->Uid; 
@@ -1164,6 +1159,8 @@ abstract class Table implements TableInterface
         $this->deleted = $this->db->nullDate;
       }
     }
+    
+    // debugMe($this)->end();
     
     if ( $this->versionAble() ){
       $this->version++;
@@ -1183,19 +1180,36 @@ abstract class Table implements TableInterface
     $k = $this->tbl_key;
     
     $ret = false;
+    $row = new DataObject();
+    foreach($this->getFields() as $fieldName => $fieldInfos){
+      if ( preg_match("/^(big|medium|small|tiny)?int/i", $fieldInfos->Type) ){
+        $row->set($fieldName, (int)$this->get($fieldName));
+        continue;
+      }
+      
+      if ( preg_match("/^(datetime|date|time|timestamp)$/i", $fieldInfos->Type) ){
+        if ( !($fieldValue=$this->get($fieldName)) ){
+          $fieldValue = $this->db->nullDate;
+        }
+        $row->set($fieldName, $fieldValue);
+        continue;
+      }
+      
+      $row->set($fieldName, $this->get($fieldName));
+    }
     
-    if ( $this->$k ){
-      $ret = $this->db->updateObject($this->tbl, $this, $this->tbl_key, $updateNulls);
+    if ( $this->{$k} ){
+      $ret = $this->db->updateObject($this->tbl, $row, $this->tbl_key, $updateNulls);
     }
     else {
-      $ret = $this->db->insertObject($this->tbl, $this, $this->tbl_key);
+      $ret = $this->db->insertObject($this->tbl, $row, $this->tbl_key);
+      $this->set($k, (int)$row->get($k));
     }
     
     if ( $ret ){
       if ( $this->orderingAble() ){
         $this->reorder( $this->getReorderConditions() );
       }
-      
       return true;
     }
     
@@ -1203,9 +1217,9 @@ abstract class Table implements TableInterface
   }
   
   /** 
-   * Get the object fields from database table columns.
+   * Get the object fields from database table columns
    * 
-   * @return   array       The list of table properties.
+   * @return   array       The list of table properties
    */
   protected function getFields()
   {
@@ -1229,43 +1243,36 @@ abstract class Table implements TableInterface
   }
   
   /**
-   * Set data type for known fields.
+   * Set data type for known fields
    * 
-   * @return   The typed value.
+   * @return   The typed value
    */
   protected function setFieldsTypeByName()
   {
-    foreach($this->getProperties() as $k => $v){
-      switch($k){
-        case 'id':
-        case 'id_category':
-        case 'parent_id':
-        case 'version':
-        case 'ordering':
-        case 'created_by':
-        case 'modified_by':
-        case 'deleted_by':
-          $v = (int)$v; 
-          break;
-        
-        case 'created':
-        case 'modified':
-        case 'deleted':
-          $v = $this->db->nullDate === $v ? '' : $v; 
-          break;
-        
-        case 'published': 
-          $v = (bool)$v;
-          break;
+    foreach($this->getFields() as $fieldName => $fieldInfos){
+      $v = $this->get($fieldName);
+      
+      if ( preg_match("/^(big|medium|small|tiny)?int/i", $fieldInfos->Type) ){
+        $this->{$fieldName} = (int)$v; 
+        continue;
       }
       
-      $this->{$k} = $v;
-    }  
+      if ( preg_match("/^(datetime|date|time|timestamp)$/i", $fieldInfos->Type) ){
+        if ( $this->db->nullDate === $v ){
+          $this->{$fieldName} = '';
+        }
+        continue;
+      }
+    
+      if ( $fieldName === 'published' ){
+        $this->{$fieldName} = (bool)$v;
+      }
+    }
   }  
   
   
   /** @deprecated */
-  public function move($delta, $where='')
+  /* public function move($delta, $where='')
   {
     $this->orderingAble(false);
     
@@ -1323,5 +1330,5 @@ abstract class Table implements TableInterface
     }
     
     return true;
-  }
+  } */
 }

@@ -10,12 +10,11 @@
  * Set database i18n
  * 
  * @param   array   $strings   Key/value pairs of translations
- * @param   bool    $default   Default translation if not set
+ * @param   bool    $default   Default translation if not set (@deprecated)
  * @return  void
  * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
  */
 function DatabaseTranslate($strings, $default=false)
 {
   \JDZ\Database\DatabaseHelper::setTranslations($strings);
-  \JDZ\Database\DatabaseHelper::setTranslationDefaultValue($default);
 }

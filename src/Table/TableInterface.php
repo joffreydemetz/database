@@ -7,6 +7,8 @@
  */
 namespace JDZ\Database\Table;
 
+use JDZ\Database\DatabaseInterface;
+
 /**
  * Table interface
  * 
@@ -15,16 +17,11 @@ namespace JDZ\Database\Table;
 interface TableInterface
 {
   /**
-   * Save associations
+   * Return the database object
    * 
-   * @return  string  $right_tbl   Right associated table short name
-   * @return  int     $pk          Left association table record ID
-   * @return  array   $right_items Right association table record IDs
-   * @return  bool    $clear       True to clear previous records
-   * @return  bool    $order       True if the associated elements should be ordered
-   * @return  bool    True if successfull
+   * @return  DatabaseInterface   The database instance
    */
-  public function saveAssociations($right, $pk, array $right_items, $clear=true, $order=false);
+  public function getDb();
   
   /**
    * Return the table short name
@@ -46,6 +43,99 @@ interface TableInterface
    * @return  string   The primary key
    */
   public function getTblKey();
+  
+  /**
+   * Set the object properties based on a named array/hash.
+   *
+   * @param   mixed  $properties  Either an associative array or another object.
+   * @return   boolean
+   */
+  public function setProperties($properties);
+  
+  /**
+   * Returns an associative array of object properties
+   *
+   * @return  array
+   */
+  public function getProperties();
+  
+  /**
+   * Sets a property of the object
+   * 
+   * @param   string  $field  The name of the property
+   * @param   mixed   $value  The value of the property to set
+   * @return  void
+   */
+  public function set($field, $value=null);
+  
+  /**
+   * Returns a property of the object or the default value if the property is not set
+   * 
+   * @param   string  $field     The name of the property
+   * @param   mixed   $default   The default value
+   * @return  mixed   The value of the property
+   */
+  public function get($field, $default=null);
+
+  /**
+   * Add an error message
+   *
+   * @param   mixed  $error  Error message or exception instance
+   * @return  void
+   */
+  public function setError($error);
+  
+  /**
+   * Return all errors, if any.
+   * 
+   * @return   array  Array of error messages or Exception instances.
+   */
+  public function getErrors();
+  
+  /**
+   * Get an error message
+   *
+   * @param   int      $i         Option error index
+   * @param   boolean  $toString  Indicates if Exception instances should return the error message or the exception object
+   * @return  string   Error message
+   */
+  public function getError($i=null, $toString=true);
+  
+  /**
+   * Return all errors, if any, as a unique string.
+   * 
+   * @param   string   $separator     The separator.
+   * @return   string   String containing all the errors separated by the specified sequence.
+   */
+  public function getErrorsAsString($glue='<br />');
+  
+  /**
+   * Has the current record been modified
+   * 
+   * @return  bool  True if modified
+   */
+  public function recordWasModified();
+  
+  /** 
+   * Disable the row for checkbox selection
+   * 
+   * @param   int    $id  The item id
+   * @return  bool   True if row should be disabled
+   */
+  public function rowIsDisabled($id);
+  
+  
+  /**
+   * Save associations
+   * 
+   * @return  string  $right_tbl   Right associated table short name
+   * @return  int     $pk          Left association table record ID
+   * @return  array   $right_items Right association table record IDs
+   * @return  bool    $clear       True to clear previous records
+   * @return  bool    $order       True if the associated elements should be ordered
+   * @return  bool    True if successfull
+   */
+  public function saveAssociations($right, $pk, array $right_items, $clear=true, $order=false);
   
   /** 
    * Reset the current table object properties to their default value (null)
@@ -200,14 +290,6 @@ interface TableInterface
    * @return   string   The default ordering clause
    */
   public function getDefaultOrdering($prefix='a.');
-  
-  /** 
-   * Disable the row for checkbox selection
-   * 
-   * @param   int    $id  The item id
-   * @return   bool   True if row should be disabled
-   */
-  public function rowIsDisabled($id);
   
   /** 
    * Check for more recent versions 

@@ -381,7 +381,7 @@ abstract class Database implements DatabaseInterface
     
     $id = $this->insertid();
     if ( $key && $id ){
-      $object->$key = $id;
+      $object->{$key} = $id;
     }
 
     return true;

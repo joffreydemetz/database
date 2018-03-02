@@ -14,7 +14,51 @@ namespace JDZ\Database;
  */
 abstract class DatabaseHelper
 {
-  use \JDZ\Utilities\Traits\Translatable;
+  /**
+   * Holds an array of translations
+   * 
+   * Defaults are in french
+   * 
+   * @var   array
+   */
+  protected static $translations = [
+    'UNKNOWN_ERROR' => 'Erreur de type inconnu',
+    
+    'ERROR_DELETED_SO_CANNOT_PUBLISH' => 'L\'élément ne peut être publié car il a été mis dans la corbeille',
+    'ERROR_EMPTY_ROW' => 'La ligne de la base de données est vide',
+    'ERROR_ITEM_ALREADY_DELETED' => 'La ligne a déjà été mise à la corbeille',
+    'ERROR_RECORD_UNCHANGED' => 'La ligne n\'a pas subit de modification',
+    'ERROR_SLUG_EXISTS' => 'Cet alias est déjà utilisé',
+    'ERROR_TITLE_EXISTS' => 'Ce titre est déjà utilisé',
+    'NO_ITEM_SELECTED' => 'Aucun élément sélectionné',
+  ];
+  
+  /**
+   * Set the translations
+   *
+   * @param   array   $translations     Key/value pairs of translations
+   * @return  void
+   */
+  public static function setTranslations(array $translations=[])
+  {
+    self::$translations = array_merge(self::$translations, $translations);
+  }
+  
+  /**
+   * Translation
+   * 
+   * @param   string  $key  The translation key
+   * @return  string  Translated string or the original key if not found
+   */
+  public static function getTranslation($key)
+  {
+    $_key = strtoupper($key);
+    if ( isset(self::$translations[$_key]) ){
+      return self::$translations[$_key];
+    }
+    
+    return $key;
+  }  
   
   /**
    * Splits a string of multiple queries into an array of individual queries.
