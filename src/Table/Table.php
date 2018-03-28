@@ -82,9 +82,7 @@ abstract class Table implements TableInterface
     if ( !isset($this->tbl_key) ){
       $this->tbl_key = 'id';
     }
-    // if ( $this->tbl_name === 'menu' ){
-    // debugMe(get_object_vars($this))->end();
-    // }
+    
     if ( $fields = $this->getFields() ){ 
       foreach($fields as $field => $v){
         if ( !$this->hasField($field) ){
@@ -445,7 +443,6 @@ abstract class Table implements TableInterface
   public function loadBySlug($slug)
   {
     $this->slugAble(false);
-    
     return $this->load(['slug'=>$slug]);
   }
   
@@ -894,7 +891,7 @@ abstract class Table implements TableInterface
   public function getReorderConditions()
   {
     $conditions = [];
-      if ( $this->categorizeAble() ){
+    if ( $this->categorizeAble() ){
       $conditions[] = 'id_category='.$this->db->q($this->id_category);
     }
     return $conditions;
@@ -906,10 +903,6 @@ abstract class Table implements TableInterface
   public function getDefaultOrdering($prefix='a.')
   {
     if ( $this->orderingAble() ){
-      if ( $this->categorizeAble() ){
-        return 'category ASC, '.$prefix.'ordering';
-      }
-      
       return $prefix.'ordering';
     }
     return $prefix.$this->tbl_key;
@@ -1160,8 +1153,6 @@ abstract class Table implements TableInterface
       }
     }
     
-    // debugMe($this)->end();
-    
     if ( $this->versionAble() ){
       $this->version++;
     }
@@ -1269,66 +1260,4 @@ abstract class Table implements TableInterface
       }
     }
   }  
-  
-  
-  /** @deprecated */
-  /* public function move($delta, $where='')
-  {
-    $this->orderingAble(false);
-    
-    if ( empty($delta) ){
-      return true;
-    }
-
-    $k = $this->tbl_key;
-    
-    $query = $this->db->getQuery(true);
-    
-    $query->select($this->tbl_key . ', ordering');
-    $query->from($this->tbl);
-    
-    if ( $delta < 0 ){
-      $query->where('ordering < ' . (int) $this->ordering);
-      $query->order('ordering DESC');
-    }
-    elseif ( $delta > 0 ){
-      $query->where('ordering > ' . (int) $this->ordering);
-      $query->order('ordering ASC');
-    }
-
-    if ( $where ){
-      $query->where($where);
-    }
-
-    $this->db->setQuery($query, 0, 1);
-    $row = $this->db->loadObject();
-    
-    if ( !empty($row) ){
-      $query = $this->db->getQuery(true);
-      $query->update($this->tbl);
-      $query->set('ordering = ' . (int) $row->ordering);
-      $query->where($this->tbl_key . ' = ' . $this->db->q($this->$k));
-      $this->db->setQuery($query);
-      $this->db->execute();
-      
-      $query = $this->db->getQuery(true);
-      $query->update($this->tbl);
-      $query->set('ordering = ' . (int) $this->ordering);
-      $query->where($this->tbl_key . ' = ' . $this->db->q($row->$k));
-      $this->db->setQuery($query);
-      $this->db->execute();
-
-      $this->ordering = $row->ordering;
-    }
-    else {
-      $query = $this->db->getQuery(true);
-      $query->update($this->tbl);
-      $query->set('ordering = ' . (int) $this->ordering);
-      $query->where($this->tbl_key . ' = ' . $this->db->q($this->$k));
-      $this->db->setQuery($query);
-      $this->db->execute();
-    }
-    
-    return true;
-  } */
 }
