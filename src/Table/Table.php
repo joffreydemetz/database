@@ -76,7 +76,7 @@ abstract class Table implements TableInterface
     $this->tbl_name = $name;
     
     if ( !isset($this->tbl) ){
-      $this->tbl = $this->db->tablePrefix.'_'.$this->tbl_name;
+      $this->tbl = $this->db->getTablePrefix().'_'.$this->tbl_name;
     }
     
     if ( !isset($this->tbl_key) ){
@@ -98,8 +98,9 @@ abstract class Table implements TableInterface
    * Returns null if the property is not set.
    * 
    * @param   string            $name  The name of the property to return
-   * @return   string|null       Value or null if the property is not set
+   * @return  string|null       Value or null if the property is not set
    * @throw   RuntimeException  If property is not set
+   * @deprecated
    */
   public function __get($name)
   {
@@ -463,6 +464,29 @@ abstract class Table implements TableInterface
     return $items;
   }
   
+  public function isDuplicate(array $properties, $id=0)
+  {
+    $where = [];
+    foreach($properties as $key => $value){
+      $where[] = $this->db->qn($key).'='.$this->db->q($value);
+    }
+    
+    $query = $this->db->getQuery(true)
+      ->select('id')
+      ->from($this->tbl)
+      ->where($where);
+      
+    if ( $id ){
+      $query->where('id <> '.(int)$id);
+    }
+    
+    $this->db->setQuery($query);
+    
+    $id = (int) $this->db->loadResult();
+    
+    return $id;
+  }
+  
   /**
    * {@inheritDoc}
    */
@@ -483,7 +507,11 @@ abstract class Table implements TableInterface
       return false;
     }
     
-    return ( $this->store() );
+    if ( !$this->store() ){
+      return false;
+    }
+    
+    return true;
   }
   
   /**
@@ -539,18 +567,18 @@ abstract class Table implements TableInterface
     if ( $this->statesAble() ){
       $this->load($pk);
       
-      if ( $this->deleted !== '' && $this->deleted !== $this->db->nullDate ){
+      if ( $this->deleted !== '' && $this->deleted !== $this->db->getNullDate() ){
         $this->setError(DatabaseHelper::getTranslation('ERROR_ITEM_ALREADY_DELETED'));
         return false;
       }
       
-      if ( $this->modified === '' || $this->modified === $this->db->nullDate ){
-        $this->modified    = $this->db->now;
-        $this->modified_by = $this->db->Uid;
+      if ( $this->modified === '' || $this->modified === $this->db->getNullDate() ){
+        $this->modified    = DateObject::getInstance()->format($this->db->getDateFormat());
+        $this->modified_by = $this->db->getUid();
       }
       
-      $this->deleted    = $this->db->now; 
-      $this->deleted_by = $this->db->Uid;
+      $this->deleted    = DateObject::getInstance()->format($this->db->getDateFormat());
+      $this->deleted_by = $this->db->getUid();
       
       if ( $this->publishingAble() ){
         $this->published = 0; 
@@ -593,11 +621,11 @@ abstract class Table implements TableInterface
     if ( $this->statesAble() ){
       $this->load($pk);
       
-      if ( $this->deleted === $this->db->nullDate ){
+      if ( $this->deleted === $this->db->getNullDate() ){
         return false;
       }
       
-      $this->deleted    = $this->db->nullDate;
+      $this->deleted    = $this->db->getNullDate();
       $this->deleted_by = 0;
       
       $this->store();
@@ -680,7 +708,7 @@ abstract class Table implements TableInterface
     $state = (int)$state;
     
     if ( $this->statesAble() ){
-      if ( $this->deleted !== '' && $this->deleted !== $this->db->nullDate ){
+      if ( $this->deleted !== '' && $this->deleted !== $this->db->getNullDate() ){
         $this->setError(DatabaseHelper::getTranslation('ERROR_DELETED_SO_CANNOT_PUBLISH'));
         return false;
       }
@@ -692,8 +720,8 @@ abstract class Table implements TableInterface
     $query->where($this->tbl_key.' = '.$this->db->q($pk));
     
     if ( $this->statesAble() ){
-      $query->set('modified='.$this->db->q($this->db->now));
-      $query->set('modified_by='.$this->db->q($this->db->Uid));
+      $query->set('modified='.DateObject::getInstance()->format($this->db->getDateFormat()));
+      $query->set('modified_by='.$this->db->q($this->db->getUid()));
     }
     
     $this->db->setQuery($query);
@@ -852,7 +880,7 @@ abstract class Table implements TableInterface
    */
   public function trashedItems(array $conditions=[])
   {
-    $conditions[] = $this->db->qn('deleted').' != '.$this->db->q($this->db->nullDate);
+    $conditions[] = $this->db->qn('deleted').' != '.$this->db->q($this->db->getNullDate());
     // $conditions[] = $this->db->qn('deleted_by').' <> 0';
     
     $query = $this->db->getQuery(true);
@@ -895,17 +923,6 @@ abstract class Table implements TableInterface
       $conditions[] = 'id_category='.$this->db->q($this->id_category);
     }
     return $conditions;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function getDefaultOrdering($prefix='a.')
-  {
-    if ( $this->orderingAble() ){
-      return $prefix.'ordering';
-    }
-    return $prefix.$this->tbl_key;
   }
   
   /**
@@ -1127,29 +1144,29 @@ abstract class Table implements TableInterface
     // }
     
     if ( $this->statesAble() ){
-      $user = $this->db->Uid;
+      $user = $this->db->getUid();
       
       if ( empty($this->id) ){
-        $this->created    = $this->db->now; 
-        $this->created_by = $this->db->Uid; 
+        $this->created    = DateObject::getInstance()->format($this->db->getDateFormat());
+        $this->created_by = $this->db->getUid(); 
         
-        // $this->modified   = $this->db->nullDate;
-        // $this->deleted    = $this->db->nullDate;
+        // $this->modified   = $this->db->getNullDate();
+        // $this->deleted    = $this->db->getNullDate();
       }
       else {
         // $this->created     = null; 
         // $this->created_by  = null;
         
-        $this->modified    = $this->db->now; 
-        $this->modified_by = $this->db->Uid; 
+        $this->modified    = DateObject::getInstance()->format($this->db->getDateFormat()); 
+        $this->modified_by = $this->db->getUid(); 
       }
       
       if ( empty($this->modified) ){
-        $this->modified = $this->db->nullDate;
+        $this->modified = $this->db->getNullDate();
       }
       
       if ( empty($this->deleted) ){
-        $this->deleted = $this->db->nullDate;
+        $this->deleted = $this->db->getNullDate();
       }
     }
     
@@ -1180,7 +1197,7 @@ abstract class Table implements TableInterface
       
       if ( preg_match("/^(datetime|date|time|timestamp)$/i", $fieldInfos->Type) ){
         if ( !($fieldValue=$this->get($fieldName)) ){
-          $fieldValue = $this->db->nullDate;
+          $fieldValue = $this->db->getNullDate();
         }
         $row->set($fieldName, $fieldValue);
         continue;
@@ -1249,7 +1266,7 @@ abstract class Table implements TableInterface
       }
       
       if ( preg_match("/^(datetime|date|time|timestamp)$/i", $fieldInfos->Type) ){
-        if ( $this->db->nullDate === $v ){
+        if ( $this->db->getNullDate() === $v ){
           $this->{$fieldName} = '';
         }
         continue;

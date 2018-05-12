@@ -26,7 +26,7 @@ abstract class Database implements DatabaseInterface
    * @var    string
    */
   protected $name;
-
+  
   /**
    * Connection options
    *
@@ -137,13 +137,6 @@ abstract class Database implements DatabaseInterface
   protected $errorMsg;
   
   /**
-   * The current date time
-   * 
-   * @var    string  
-   */
-  protected $now;
-  
-  /**
    * A unique id to identifiy activity (optionnal)
    * 
    * @var    int  
@@ -221,16 +214,18 @@ abstract class Database implements DatabaseInterface
    * Constructor
    * @param   array  $options  List of options used to configure the connection
    */
-  protected function __construct(array $options)
+  public function __construct(array $options)
   {
-    $options['database'] = isset($options['database'])  ? $options['database']  : null;
-    $options['select']   = isset($options['select'])    ? $options['select']    : true;
+    $options['database'] = isset($options['database']) ? $options['database'] : null;
+    $options['select']   = isset($options['select'])   ? $options['select']   : true;
     
+    $this->database    = $options['database'];
     $this->tablePrefix = $options['dbprefix'];
     $this->logpath     = $options['logpath'];
     $this->logall      = $options['logall'];
     
     unset(
+      $options['database'],
       $options['dbprefix'],
       $options['logpath'],
       $options['logall']
@@ -239,7 +234,7 @@ abstract class Database implements DatabaseInterface
     $this->options = $options;
     
     $this->Uid         = 0;
-    $this->dateFormat  = 'Y-m-d H:i:s';;
+    $this->dateFormat  = 'Y-m-d H:i:s';
     
     $this->limit     = 0;
     $this->offset    = 0;
@@ -249,8 +244,6 @@ abstract class Database implements DatabaseInterface
       'dbqueries' => new DatabaseLogger('Executed', $this->logpath.'queries.log'),
       'dbfails'   => new DatabaseLogger('Failed', $this->logpath.'failed.log', 'error'),
     ];
-    
-    $this->now = DateObject::getInstance()->format($this->dateFormat);
   }
   
   /**
@@ -260,32 +253,6 @@ abstract class Database implements DatabaseInterface
   public function __destruct()
   {
     $this->disconnect();
-  }
-  
-  /**
-   * Magic method to return some protected property values
-   *
-   * Returns null if the property is not set.
-   * 
-   * @param   string  $name  The name of the property to return
-   * @return   mixed
-   */
-  public function __get($name)
-  {
-    switch($name){
-      case 'name':
-      case 'tablePrefix':
-      case 'dateFormat':
-      case 'nullDate':
-      case 'database':
-      case 'connection':
-      case 'now':
-      case 'Uid':
-        return isset($this->{$name}) ? $this->{$name} : null;
-      
-      default:
-        throw new RuntimeException('Cannot access/get property ' . __CLASS__ . '::' . $name);
-    }
   }
   
   /**
@@ -315,6 +282,65 @@ abstract class Database implements DatabaseInterface
   }
   
   /**
+   * {@inheritDoc}
+   */
+  public function setQuery($query, $offset=0, $limit=0)
+  {
+    $this->sql    = $query;
+    $this->limit  = (int) max(0, $limit);
+    $this->offset = (int) max(0, $offset);
+    return $this;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public function setUid($Uid)
+  {
+    $this->Uid = (int)$Uid;
+  }
+  
+  public function getConnection()
+  {
+    return $this->connection;
+  }
+  
+  public function getName()
+  {
+    return $this->name;
+  }
+  
+  public function getTablePrefix()
+  {
+    return $this->tablePrefix;
+  }
+  
+  public function getDateFormat()
+  {
+    return $this->dateFormat;
+  }
+  
+  public function getNullDate()
+  {
+    return $this->nullDate;
+  }
+  
+  public function getUid()
+  {
+    return $this->Uid;
+  }
+
+  /**
+   * Get the minimum supported database version.
+   *
+   * @return  string  The minimum version number for the database driver.
+   */
+  public function getDbMinimum()
+  {
+    return static::$dbMinimum;
+  }
+  
+  /**
    * Connects to the database if needed.
    *
    * @return  void  Returns void if the database connected successfully.
@@ -337,24 +363,6 @@ abstract class Database implements DatabaseInterface
    */
   abstract public function disconnect();
   
-  /**
-   * Get the minimum supported database version.
-   *
-   * @return  string  The minimum version number for the database driver.
-   */
-  public function getDbMinimum()
-  {
-    return static::$dbMinimum;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function setUid($Uid)
-  {
-    $this->Uid = (int)$Uid;
-  }
-
   /**
    * {@inheritDoc}
    */
@@ -441,17 +449,6 @@ abstract class Database implements DatabaseInterface
     return $this->execute();
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function setQuery($query, $offset=0, $limit=0)
-  {
-    $this->sql    = $query;
-    $this->limit  = (int) max(0, $limit);
-    $this->offset = (int) max(0, $offset);
-    return $this;
-  }
-
   /**
    * {@inheritDoc}
    */

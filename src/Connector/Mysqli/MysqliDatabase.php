@@ -50,7 +50,7 @@ class MysqliDatabase extends Database
   /**
    * {@inheritDoc}
    */
-  protected function __construct(array $options=[])
+  public function __construct(array $options=[])
   {
     $options['host']     = isset($options['host'])     ? $options['host']           : 'localhost';
     $options['port']     = isset($options['port'])     ? (int) $options['port']     : null;
@@ -89,8 +89,8 @@ class MysqliDatabase extends Database
     }
 
     // If auto-select is enabled select the given database.
-    if ( $this->options['select'] && $this->options['database'] ){
-      $this->select($this->options['database']);
+    if ( $this->options['select'] && $this->database ){
+      $this->select($this->database);
     }
     
     // Set charactersets (needed for MySQL 4.1.2+).
@@ -106,9 +106,7 @@ class MysqliDatabase extends Database
   }
 
   /**
-   * Determines if the connection to the server is active.
-   *
-   * @return  boolean  True if connected to the database engine.
+   * {@inheritDoc}
    */
   public function connected()
   {
@@ -121,16 +119,13 @@ class MysqliDatabase extends Database
   }
 
   /**
-   * Disconnects the database.
-   *
-   * @return  void
+   * {@inheritDoc}
    */
   public function disconnect()
   {
     // Close the connection.
     if ( is_callable($this->connection, 'close') ){
       $this->connection->close();
-      // return mysqli_close($this->connection);
     }
     
     $this->connection = null;
@@ -210,20 +205,16 @@ class MysqliDatabase extends Database
    */
   public function escape($text, $extra=false)
   {
+    if ( !$this->connection ){
+      die('No connection');
+    }
     $result = $this->connection->real_escape_string($text);
-
+    
     if ( $extra ){
       $result = addcslashes($result, '%_');
     }
 
     return $result;
-    // $result = mysqli_real_escape_string($this->connection, $text);
-
-    // if ( $extra ){
-      // $result = addcslashes($result, '%_');
-    // }
-
-    // return $result;
   }
   
   /**
@@ -310,12 +301,6 @@ class MysqliDatabase extends Database
   public function getCollation()
   {
     return $this->setQuery('SELECT @@collation_database;')->loadResult();
-    // $result = null;
-    
-    // $this->setQuery('SELECT DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '.$this->q($this->database).' LIMIT 1;');
-    // $result = $this->loadResult();
-    
-    // return $result;
   }
   
   /**
@@ -324,7 +309,6 @@ class MysqliDatabase extends Database
   public function getVersion()
   {
     return $this->connection->server_info;
-    // return mysqli_get_server_info($this->connection);
   }
 
   /**
@@ -333,7 +317,6 @@ class MysqliDatabase extends Database
   public function setUTF()
   {
     $this->connection->set_charset($this->options['charset']);
-    // mysqli_query($this->connection, "SET NAMES '".$this->options['charset']."'");
   }
 
   /**

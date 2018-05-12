@@ -269,52 +269,42 @@ interface TableInterface
   /** 
    * Get the next ordering value
    * 
-   * @param   array|string    $where     A valid query where clause
-   * @return   int             The next table ordering value.
+   * @param  array|string    $where     A valid query where clause
+   * @return int             The next table ordering value.
    */
   public function getNextOrder($where = '');
   
   /** 
    * Reorder conditions
    * 
-   * @return   array    $conditions     The filter conditions
+   * @return array    $conditions     The filter conditions
    */
   public function getReorderConditions();
   
   /** 
-   * Get the table default ordering clause
-   * 
-   * Filter state to enable ordering managment display
-   * Defaults to "ordered by ordering"
-   * 
-   * @return   string   The default ordering clause
-   */
-  public function getDefaultOrdering($prefix='a.');
-  
-  /** 
    * Check for more recent versions 
    * 
-   * @return   int   The previous version record ID (in table::version)
+   * @return int  The previous version record ID (in table::version)
    */
   public function getPreviousVersion();
   
   /** 
    * Check if a title is unique according to specified conditions.
    * 
-   * @param   int       $id             The loaded object id (to exclude it from results) 
-   * @param   string    $title          The title to check
-   * @param   array     $conditions     The filter conditions
-   * @return   string    The default ordering clause
+   * @param  int     $id             The loaded object id (to exclude it from results) 
+   * @param  string  $title          The title to check
+   * @param  array   $conditions     The filter conditions
+   * @return string  The default ordering clause
    */
   public function checkTitleUnique($id, $title, array $conditions=[]);
   
   /** 
    * Check if a slug is unique according to specified conditions.
    * 
-   * @param   int       $id             The loaded object id (to exclude it from results) 
-   * @param   string    $slug           The slug to check
-   * @param   array     $conditions     The filter conditions
-   * @return   string    The default ordering clause
+   * @param  int       $id             The loaded object id (to exclude it from results) 
+   * @param  string    $slug           The slug to check
+   * @param  array     $conditions     The filter conditions
+   * @return string    The default ordering clause
    */
   public function checkSlugUnique($id, $slug, array $conditions=[]);
   
@@ -322,25 +312,25 @@ interface TableInterface
    * Check if table includes specified field(s)
    * 
    * @param   array|string  An array or a string with the field name
-   * @return   bool          True if the field is found
+   * @return   bool         True if the field is found
    */
   public function hasField($fields);
   
   /** 
    * Does table include a title and a slug 
    * 
-   * @param   bool  $return   False to throw an exception if the functionnality
-   *                          is not available for the current table object.
-   * @return   bool  True if the functionnality is supported.
+   * @param  bool  $return   False to throw an exception if the functionnality
+   *                         is not available for the current table object.
+   * @return bool  True if the functionnality is supported.
    */
   public function slugAble($return=true);
   
   /** 
    * Supports categories
    * 
-   * @param   bool  $return   False to throw an exception if the functionnality
-   *                          is not available for the current table object.
-   * @return   bool  True if the functionnality is supported.
+   * @param  bool  $return   False to throw an exception if the functionnality
+   *                         is not available for the current table object.
+   * @return bool  True if the functionnality is supported.
    */
   public function categorizeAble($return=true);
   

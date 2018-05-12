@@ -320,7 +320,7 @@ abstract class Query implements QueryInterface
    */
   public function dump()
   {
-    return '<pre class="query">' . str_replace('#__', $this->db->tablePrefix, (string)$this) . '</pre>';
+    return '<pre class="query">' . str_replace('#__', $this->db->getTablePrefix(), (string)$this) . '</pre>';
   }
   
   /**
@@ -471,7 +471,7 @@ abstract class Query implements QueryInterface
    */
   public function dateFormat()
   {
-    return $this->db->dateFormat;
+    return $this->db->getDateFormat();
   }
 
   /**
@@ -485,10 +485,10 @@ abstract class Query implements QueryInterface
    */
   public function nullDate($quoted=true)
   {
-    if ( $quoted === true ){
-      $result = $this->db->q($this->db->nullDate);
+    if ( $quoted ){
+      $result = $this->db->q($this->db->getNullDate());
     }
-    return $this->db->nullDate;
+    return $this->db->getNullDate();
   }
 
   /**
