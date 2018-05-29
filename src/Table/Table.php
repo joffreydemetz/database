@@ -11,6 +11,7 @@ use JDZ\Database\DatabaseInterface;
 use JDZ\Database\DatabaseHelper;
 use JDZ\Database\Exception\TableException;
 use JDZ\Utilities\DataObject;
+use JDZ\Utilities\Date as DateObject;
 use RuntimeException;
 use Exception;
 
