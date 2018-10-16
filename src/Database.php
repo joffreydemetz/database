@@ -9,8 +9,7 @@ namespace JDZ\Database;
 
 use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Exception\QueryException;
-use JDZ\Database\DatabaseLogger;
-use JDZ\Utilities\Date as DateObject;
+use Monolog\Logger as MonologLogger;
 use RuntimeException;
 
 /**
@@ -39,7 +38,7 @@ abstract class Database implements DatabaseInterface
    * 
    * @var    string  
    */
-  protected $logpath;
+  // protected $logpath;
 
   /**
    * True to log all queries (DEV mode)
@@ -73,9 +72,9 @@ abstract class Database implements DatabaseInterface
   /**
    * Database monolog loggers
    * 
-   * @var    Logger[]
+   * @var    MonologLogger[]
    */
-  protected $loggers;
+  protected $loggers = [];
   
   /**
    * The database connection resource
@@ -96,7 +95,7 @@ abstract class Database implements DatabaseInterface
    * 
    * @var    int 
    */
-  protected $limit;
+  protected $limit = 0;
 
   /**
    * The character(s) used to quote SQL statement names such as table names or field names,
@@ -113,7 +112,7 @@ abstract class Database implements DatabaseInterface
    * 
    * @var    int  
    */
-  protected $offset;
+  protected $offset = 0;
 
   /**
    * The current SQL statement to execute
@@ -127,7 +126,7 @@ abstract class Database implements DatabaseInterface
    * 
    * @var    int  
    */
-  protected $errorNum;
+  protected $errorNum = 0;
   
   /**
    * The database error message
@@ -141,14 +140,21 @@ abstract class Database implements DatabaseInterface
    * 
    * @var    int  
    */
-  protected $Uid;
+  protected $Uid = 0;
   
   /**
    * PHP date() function compliant date format for the database driver
    * 
    * @var    string  
    */
-  protected $dateFormat;
+  protected $dateFormat = 'Y-m-d H:i:s';
+  
+  /**
+   * Profiling queries
+   * 
+   * @var    bool
+   */
+  protected $profiling = false;
 
   /**
    * The minimum supported database version
@@ -167,7 +173,7 @@ abstract class Database implements DatabaseInterface
   /**
    * Test to see if the connector is available
    * 
-   * @return   boolean  True on success, false otherwise.
+   * @return boolean  True on success, false otherwise.
    */
   public static function isSupported()
   {
@@ -183,9 +189,9 @@ abstract class Database implements DatabaseInterface
    *
    * Instances are unique by name.
    * 
-   * @param   string    $name     The unique name for the connection
-   * @param   array     $options  Key/Value pairs
-   * @return   Database  A database object
+   * @param  string    $name     The unique name for the connection
+   * @param  array     $options  Key/Value pairs
+   * @return Database  A database object
    */
   public static function getInstance($name, array $options=[])
   {
@@ -212,38 +218,25 @@ abstract class Database implements DatabaseInterface
 
   /**
    * Constructor
-   * @param   array  $options  List of options used to configure the connection
+   * @param  array  $options  List of options used to configure the connection
    */
   public function __construct(array $options)
   {
-    $options['database'] = isset($options['database']) ? $options['database'] : null;
-    $options['select']   = isset($options['select'])   ? $options['select']   : true;
+    $options['tblprefix'] = isset($options['tblprefix']) ? $options['tblprefix'] : 'cal_';
+    $options['database']  = isset($options['database'])   ? $options['database'] : null;
+    $options['select']    = isset($options['select'])     ? $options['select']   : true;
     
     $this->database    = $options['database'];
-    $this->tablePrefix = $options['dbprefix'];
-    $this->logpath     = $options['logpath'];
+    $this->tablePrefix = $options['tblprefix'];
     $this->logall      = $options['logall'];
     
     unset(
       $options['database'],
-      $options['dbprefix'],
-      $options['logpath'],
+      $options['tblprefix'],
       $options['logall']
     );
     
     $this->options = $options;
-    
-    $this->Uid         = 0;
-    $this->dateFormat  = 'Y-m-d H:i:s';
-    
-    $this->limit     = 0;
-    $this->offset    = 0;
-    $this->errorNum  = 0;
-    
-    $this->loggers = [
-      'dbqueries' => new DatabaseLogger('Executed', $this->logpath.'queries.log'),
-      'dbfails'   => new DatabaseLogger('Failed', $this->logpath.'failed.log', 'error'),
-    ];
   }
   
   /**
@@ -258,9 +251,9 @@ abstract class Database implements DatabaseInterface
   /**
    * Magic method to provide method alias support for quote() and quoteName().
    *
-   * @param   string  $method  The called method.
-   * @param   array   $args    The array of arguments passed to the method.
-   * @return   string  The aliased method's return value or null.
+   * @param  string  $method  The called method.
+   * @param  array   $args    The array of arguments passed to the method.
+   * @return string  The aliased method's return value or null.
    */
   public function __call($method, $args)
   {
@@ -281,6 +274,26 @@ abstract class Database implements DatabaseInterface
     }
   }
   
+  public function setQueriesLogger($logger)
+  {
+    $this->loggers['queries'] = $logger;
+    return $this;
+  }
+  
+  public function setFailsLogger($logger)
+  {
+    $this->loggers['fails'] = $logger;
+    return $this;
+  }
+  
+  public function log($logger, $message, $type='info')
+  {
+    if ( isset($this->loggers[$logger]) ){
+      $this->loggers[$logger]->add($type, $message);
+    }
+    return $this;
+  }
+  
   /**
    * {@inheritDoc}
    */
@@ -298,6 +311,7 @@ abstract class Database implements DatabaseInterface
   public function setUid($Uid)
   {
     $this->Uid = (int)$Uid;
+    return $this;
   }
   
   public function getConnection()
@@ -320,9 +334,13 @@ abstract class Database implements DatabaseInterface
     return $this->dateFormat;
   }
   
-  public function getNullDate()
+  public function getNullDate($dateTime=true)
   {
-    return $this->nullDate;
+    if ( $dateTime ){
+      return $this->nullDate;
+    }
+    
+    return substr($this->nullDate, 0, 10);
   }
   
   public function getUid()
@@ -333,7 +351,7 @@ abstract class Database implements DatabaseInterface
   /**
    * Get the minimum supported database version.
    *
-   * @return  string  The minimum version number for the database driver.
+   * @return string  The minimum version number for the database driver.
    */
   public function getDbMinimum()
   {
@@ -343,7 +361,7 @@ abstract class Database implements DatabaseInterface
   /**
    * Connects to the database if needed.
    *
-   * @return  void  Returns void if the database connected successfully.
+   * @return void  Returns void if the database connected successfully.
    *
    * @throws  \RuntimeException
    */
@@ -352,28 +370,39 @@ abstract class Database implements DatabaseInterface
   /**
    * Determines if the connection to the server is active.
    *
-   * @return  boolean  True if connected to the database engine.
+   * @return boolean  True if connected to the database engine.
    */
   abstract public function connected();
 
   /**
    * Disconnects the database.
    *
-   * @return  void
+   * @return void
    */
   abstract public function disconnect();
+
+  /**
+   * Start profiling queries
+   *
+   * @return void
+   */
+  abstract public function startProfiling();
   
   /**
-   * {@inheritDoc}
+   * Show profiled queries
+   *
+   * @return string
    */
-  public function insertObject($table, &$object, $key=null)
+  abstract public function showProfiles();
+  
+  public function insertObject($table, $row, $key=null)
   {
     $fields = [];
     $values = [];
-
+    
     $statement = 'INSERT INTO ' . $this->quoteName($table) . ' (%s) VALUES (%s)';
 
-    foreach($object->getProperties() as $k => $v){
+    foreach($row->all() as $k => $v){
       if ( is_array($v) || is_object($v) || $v === null ){
         continue;
       }
@@ -382,76 +411,55 @@ abstract class Database implements DatabaseInterface
       $values[] = $this->quote($v);
     }
     
-    $this->setQuery(sprintf($statement, implode(',', $fields), implode(',', $values)));
+    $this->setQuery(sprintf($statement, implode(', ', $fields), implode(', ', $values)));
     if ( !$this->execute() ){
       return false;
     }
     
     $id = $this->insertid();
     if ( $key && $id ){
-      $object->{$key} = $id;
+      $row->set($key, $id);
     }
-
+    
     return true;
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  public function updateObject($table, &$object, $key, $nulls=false)
+  public function updateObject($table, $row, $key, $nulls=false)
   {
     $fields = [];
     $where = '';
 
-    // Create the base update statement.
     $statement = 'UPDATE ' . $this->quoteName($table) . ' SET %s WHERE %s';
 
-    // Iterate over the object variables to build the query fields/value pairs.
-    foreach ($object->getProperties() as $k => $v){
-      // Only process scalars that are not internal fields.
-      if ( is_array($v) or is_object($v) or $k[0] == '_' ){
-        continue;
-      }
-
-      // Set the primary key to the WHERE clause instead of a field to update.
+    foreach($row->all() as $k => $v){
       if ( $k == $key ){
         $where = $this->quoteName($k) . '=' . $this->quote($v);
         continue;
       }
 
-      // Prepare and sanitize the fields and values for the database query.
       if ( $v === null ){
-        // If the value is null and we want to update nulls then set it.
-        if ( $nulls ){
-          $val = 'NULL';
-        }
-        // If the value is null and we do not want to update nulls then ignore this field.
-        else {
+        if ( !$nulls ){
           continue;
         }
+        $val = 'NULL';
       }
-      // The field is not null so we prep it for update.
       else {
         $val = $this->quote($v);
       }
 
-      // Add the field to be updated.
       $fields[] = $this->quoteName($k) . '=' . $val;
     }
 
-    // We don't have any fields to update.
     if ( empty($fields) ){
       return true;
     }
     
-    // Set the query and execute the update.
-    $this->setQuery(sprintf($statement, implode(",", $fields), $where));
+    $this->setQuery(sprintf($statement, implode(', ', $fields), $where));
+    // debugMe((string)$this->getQuery())->end();
+    
     return $this->execute();
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function loadAssoc()
   {
     $result = null;
@@ -467,9 +475,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function loadAssocList($key=null, $column=null)
   {
     $result = null;
@@ -493,9 +498,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadRow()
   {
     $result = null;
@@ -511,9 +513,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadRowList($key=null)
   {
     $result = null;
@@ -536,9 +535,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadObject($class='\\stdClass')
   {
     $result = null;
@@ -554,9 +550,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadObjectList($key='', $class='\\stdClass')
   {
     $result = null;
@@ -579,9 +572,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadColumn($offset = 0)
   {
     $result = null;
@@ -599,9 +589,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadResult()
   {
     $result = null;
@@ -617,9 +604,6 @@ abstract class Database implements DatabaseInterface
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadNextObject($class='\\stdClass')
   {
     static $cursor;
@@ -639,9 +623,6 @@ abstract class Database implements DatabaseInterface
     return $this->errorNum ? null : false;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function loadNextRow()
   {
     static $cursor;
@@ -661,29 +642,22 @@ abstract class Database implements DatabaseInterface
     return $this->errorNum ? null : false;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function query()
   {
     return $this->execute();
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function quote($text, $escape=true)
   {
     if ( is_int($text) || ctype_digit($text) ){
-      return $text;
+      if ( !preg_match("/^[0]+/", $text) ){
+        return $text;
+      }
     }
     
-    return '\'' . ($escape ? $this->escape($text) : $text) . '\'';
+    return '\''.($escape ? $this->escape($text) : $text).'\'';
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function quoteName($name, $as=null)
   {
     if ( is_string($name) ){
@@ -714,17 +688,11 @@ abstract class Database implements DatabaseInterface
     return $fin;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function isMinimumVersion()
   {
     return version_compare($this->getVersion(), static::$dbMinimum) >= 0;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   protected function quoteNameStr($strArr)
   {
     $q = $this->nameQuote;

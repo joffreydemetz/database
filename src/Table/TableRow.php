@@ -7,12 +7,6 @@
  */
 namespace JDZ\Database\Table;
 
-use JDZ\Database\DatabaseInterface;
-use JDZ\Database\DatabaseHelper;
-use JDZ\Database\Exception\TableException;
-use RuntimeException;
-use Exception;
-
 /**
  * Table Row
  * 
@@ -21,10 +15,15 @@ use Exception;
 class TableRow implements TableRowInterface
 {
   /**
-   * Constructor 
+   * Create an return a new TableRow instance 
    * 
-   * @param  array|object|null  $properties  Key/Value pairs
+   * @return TableRow
    */
+  public static function create()
+  {
+    return new self();
+  }
+  
   public function __construct($properties=null)
   {
     if ( null !== $properties ){
@@ -32,28 +31,7 @@ class TableRow implements TableRowInterface
     }
   }
   
-  /**
-   * Set the object properties
-   * 
-   * @param   mixed  $properties  Either an associative array or another object
-   * @return  void
-   */
-  public function setProperties($properties)
-  {
-    if ( is_array($properties) || is_object($properties) ){
-      foreach((array)$properties as $k => $v){
-        $this->set($k, $v);
-      }
-    }
-  }
-  
-  /**
-   * Returns an associative array of object properties
-   *
-   * @param   bool  $object  True to return a stdClass
-   * @return  array|stdClass
-   */
-  public function getProperties($object=true)
+  public function all($object=false)
   {
     $properties = get_object_vars($this);
     
@@ -62,78 +40,72 @@ class TableRow implements TableRowInterface
     }
     
     return $properties;
+  }  
+  
+  public function setProperties($properties)
+  {
+    if ( is_array($properties) || is_object($properties) ){
+      foreach((array)$properties as $k => $v){
+        $this->set($k, $v);
+      }
+    }
+    return $this;
   }
   
-  /**
-   * Modifies a property of the object, creating it if it does not already exist
-   *
-   * @param   string  $key    The name of the property
-   * @param   mixed   $value  The value of the property to set
-   * @return  void
-   */
   public function set($key, $value=null)
   {
     $this->{$key} = $value;
+    return $this;
   }
   
-  /**
-   * Set a default value
-   *
-   * @param   string  $key    The name of the property
-   * @param   mixed   $value  The default value of the property
-   * @return  void
-   */
   public function def($key, $value=null)
   {
     if ( !$this->has($key) ){
       $this->set($key, $value);
     }
+    return $this;
   }
   
-  /**
-   * Returns a property of the object or the default value if the property is not set
-   * 
-   * @param   string  $key  The name of the property
-   * @param   mixed   $default   The default value
-   * @return  mixed   The value of the property
-   */
   public function get($key, $default=null)
   {
-    if ( isset($this->{$property}) ){
-      return $this->{$property};
+    if ( isset($this->{$key}) ){
+      return $this->{$key};
     }
     return $default;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function has($key)
   {
     return property_exists($this, $key);
   }
   
-  /** 
-   * Check if the record has been modified
-   * 
-   * @param   TableRow  $old  Another table row object to compare
-   * @return  bool      True for a new record or if no modifications were found
-   */
-  public function diff(TableRow $old)
+  public function diff(TableRow $oldRow)
   {
-    if ( intval($this->get('id')) === 0 || intval($old->get('id')) === 0 ){
+    if ( intval($this->get('id')) === 0 || intval($oldRow->get('id')) === 0 ){
       return true;
     }
     
-    $props = $this->getProperties(false);
+    $props = [];
     
-    foreach($props as $k => $v){
-      if ( $this->get($k) === $old->get($k) ){
-        unset($props[$k]);
+    foreach(array_keys(get_object_vars($this)) as $field){
+      if ( $this->get($field) === $oldRow->get($field) ){
         continue;
       }
+      
+      // ignore fields that are not set in the current record
+      if ( null === $this->{$field} ){
+        continue;
+      }
+      
+      // property was modified
+      $props[$field] = $this->get($field);
     }
     
-    return ( !empty($props) > 0 );
+    return $props;
+  }
+  
+  protected function getFields()
+  {
+    return array_keys( get_object_vars($this) );
   }
 }

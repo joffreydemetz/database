@@ -52,15 +52,14 @@ class MysqliDatabase extends Database
    */
   public function __construct(array $options=[])
   {
-    $options['host']     = isset($options['host'])     ? $options['host']           : 'localhost';
-    $options['port']     = isset($options['port'])     ? (int) $options['port']     : null;
-    $options['socket']   = isset($options['socket'])   ? $options['socket']         : null;
-    $options['database'] = isset($options['database']) ? $options['database']       : null;
-    $options['select']   = isset($options['select'])   ? (bool) $options['select']  : true;
-    $options['logpath']  = isset($options['logpath'])  ? $options['logpath']        : '';
-    $options['logall']   = isset($options['logall'])   ? $options['logall']         : false;
-    $options['prefix']   = isset($options['prefix'])   ? $options['prefix']         : 'sto_';
-    $options['charset']  = isset($options['charset'])  ? $options['charset']        : 'utf8';
+    $options['host']      = isset($options['host'])      ? $options['host']           : 'localhost';
+    $options['port']      = isset($options['port'])      ? (int) $options['port']     : null;
+    $options['socket']    = isset($options['socket'])    ? $options['socket']         : null;
+    $options['logall']    = isset($options['logall'])    ? $options['logall']         : false;
+    $options['tblprefix'] = isset($options['tblprefix']) ? $options['tblprefix']      : 'cal_';
+    $options['charset']   = isset($options['charset'])   ? $options['charset']        : 'utf8';
+    $options['database']  = isset($options['database'])  ? $options['database']       : null;
+    $options['select']    = isset($options['select'])    ? (bool) $options['select']  : true;
     
     parent::__construct($options);
   }
@@ -155,7 +154,7 @@ class MysqliDatabase extends Database
     }
     
     if ( $this->logall === true ){
-      $this->loggers['dbqueries']->add('info', $sql);
+      $this->log('queries', $sql, 'info');
     }
     
     $this->errorNum = 0;
@@ -167,7 +166,7 @@ class MysqliDatabase extends Database
       $this->errorNum = (int) mysqli_errno($this->connection);
       $this->errorMsg = (string) mysqli_error($this->connection).' SQL='.$sql;
       
-      $this->loggers['dbfails']->add('error', '['.$this->errorNum.'] '.$this->errorMsg);
+      $this->log('fails', '['.$this->errorNum.'] '.$this->errorMsg, 'error');
       
       throw new QueryException($this->errorMsg, $this->errorNum);
     }
@@ -185,24 +184,20 @@ class MysqliDatabase extends Database
     }
 
     if ( !mysqli_select_db($this->connection, $database) ){
-      throw new DatabaseException('Couldn\'t reach the selected database ('.$database.') ['.get_class($this).']');
+      $error = 'Couldn\'t reach the selected database ('.$database.') ['.get_class($this).']';
+      $this->log('fails', $error, 'error');
+      throw new DatabaseException($error);
     }
     
     return true;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function insertid()
   {
     return $this->connection->insert_id;
     // return mysqli_insert_id($this->connection);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function escape($text, $extra=false)
   {
     if ( !$this->connection ){
@@ -217,25 +212,16 @@ class MysqliDatabase extends Database
     return $result;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function getNumRows($cursor = null)
   {
     return mysqli_num_rows($cursor ?: $this->cursor);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function getAffectedRows()
   {
     return $this->connection->affected_rows;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function getTableCreate($tables)
   {
     $result = [];
@@ -251,92 +237,121 @@ class MysqliDatabase extends Database
     return $result;
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  public function getTableColumns($table, $typeOnly=true)
+  public function getTableColumns($table, $full=false)
   {
-    $result = [];
-
-    $this->setQuery('SHOW FULL COLUMNS FROM '.$this->qn($this->escape($table)));
-    $fields = $this->loadObjectList();
+    static $columns;
     
-    if ( $typeOnly ){
-      foreach ($fields as $field){
-        $result[$field->Field] = preg_replace("/[(0-9)]/", '', $field->Type);
+    if ( !isset($columns) ){
+      $columns = [];
+    }
+    
+    $table = str_replace('#__', $this->getTablePrefix(), $table);
+    
+    if ( !isset($columns[$table]) ){
+      $columns[$table] = [];
+      
+      $this->setQuery('SHOW '.($full?'FULL ':'').'COLUMNS FROM '.$table);
+      $fields = $this->loadObjectList();
+      foreach($fields as $field){
+        $field->Type = preg_replace("/^([^\(]+).*$/", "$1", $field->Type);
+        $columns[$table][$field->Field] = $field;
       }
     }
-    else {
-      foreach ($fields as $field){
-        $result[$field->Field] = $field;
-      }
-    }
-
-    return $result;
+    
+    return $columns[$table];
   }
-
-  /**
-   * {@inheritDoc}
-   */
+  
   public function getTableKeys($table)
   {
-    $this->setQuery('SHOW KEYS FROM '.$this->qn($table));
+    $table = str_replace('#__', $this->getTablePrefix(), $table);
+    
+    $this->setQuery('SHOW KEYS FROM '.$$table);
     $keys = $this->loadObjectList();
     return $keys;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function getTableList()
   {
-    $this->setQuery('SHOW TABLES');
-    $tables = $this->loadColumn();
+    static $tables;
+    
+    if ( !isset($tables) ){
+      $this->setQuery('SHOW TABLES');
+      $tables = $this->loadColumn();
+    }
+    
     return $tables;
   }
 
-  /**
-   * {@inheritDoc}
-   */
+  public function tableExists($table)
+  {
+    $table = str_replace('#__', $this->getTablePrefix(), $table);
+    
+    $tables = $this->getTableList();
+    return in_array($table, $tables);
+  }
+
   public function getCollation()
   {
     return $this->setQuery('SELECT @@collation_database;')->loadResult();
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function getVersion()
   {
     return $this->connection->server_info;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function setUTF()
   {
     $this->connection->set_charset($this->options['charset']);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function dropTable($tableName, $ifExists=true)
   {
     $this->setQuery('DROP TABLE '.($ifExists ? 'IF EXISTS ' : '').$this->quoteName($tableName));
     $this->execute();
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function renameTable($oldTable, $newTable, $backup=null, $prefix=null)
   {
     $this->setQuery('RENAME TABLE ' . $oldTable . ' TO ' . $newTable);
     $this->execute();
   }
 
+  public function startProfiling()
+  {
+    $this->profiling = true;
+    
+    $this->setQuery('SET profiling = 1;');
+    if ( !$this->execute() ){
+      die('error startProfiling');
+    }
+  }
+
+  public function showProfiles()
+  {
+    $profiles = '';
+    
+    if ( !$this->profiling ){
+      return false;
+    }
+    
+    $this->setQuery('SHOW PROFILES;');
+    $rows = $this->loadAssocList();
+    
+    foreach($rows as &$row){
+      $this->setQuery('SHOW PROFILE FOR QUERY '.$row['Query_ID'].';');
+      $row['infos'] = $this->loadAssocList();
+    }
+    
+    // debugMe($rows)->end();
+    
+    if ( !$rows ){
+      return false;
+    }
+    
+    return $rows;
+  }
+  
   /**
    * {@inheritDoc}
    */

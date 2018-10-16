@@ -4,7 +4,7 @@
     "description": "Database",
     "keywords": ["database"],
     "homepage": "https://github.com/joffreydemetz/database/",
-    "version": "2.0.1",
+    "version": "2.0.3",
     "license": "MIT",
 
     "authors": [
@@ -28,9 +28,6 @@
     "autoload": {
         "psr-4": {
             "JDZ\\Database\\": "src"
-        },
-        "files": [
-            "shortcuts.php"
-        ]
+        }
     }
 }

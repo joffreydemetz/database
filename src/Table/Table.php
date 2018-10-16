@@ -10,7 +10,6 @@ namespace JDZ\Database\Table;
 use JDZ\Database\DatabaseInterface;
 use JDZ\Database\DatabaseHelper;
 use JDZ\Database\Exception\TableException;
-use JDZ\Utilities\DataObject;
 use JDZ\Utilities\Date as DateObject;
 use RuntimeException;
 use Exception;
@@ -44,11 +43,18 @@ abstract class Table implements TableInterface
   protected $tbl_name;
   
   /**
+   * Table Row data instance
+   * 
+   * @var    TableRow
+   */
+  protected $row;
+  
+  /**
    * Table primary key
    * 
    * @var    string
    */
-  protected $tbl_key;
+  protected $tbl_key = 'id';
   
   /**
    * Has been modified
@@ -57,6 +63,13 @@ abstract class Table implements TableInterface
    */
   protected $hasBeenModified;
   
+  /**
+   * Reorder conditions
+   * 
+   * @var    array
+   */
+  protected $reorderConditions = [];
+  
   /** 
    * An array of error messages or Exception objects
    * 
@@ -64,405 +77,194 @@ abstract class Table implements TableInterface
    */ 
   protected $errors = [];
   
-  /**
-   * Constructor
-   * 
-   * @param   string              $name  Table name
-   * @param   DatabaseInterface   $dbo   Database object
-   */
-  public function __construct($name, DatabaseInterface &$dbo)
-  {
-    $this->db =& $dbo;
-    
-    $this->tbl_name = $name;
-    
-    if ( !isset($this->tbl) ){
-      $this->tbl = $this->db->getTablePrefix().'_'.$this->tbl_name;
-    }
-    
-    if ( !isset($this->tbl_key) ){
-      $this->tbl_key = 'id';
-    }
-    
-    if ( $fields = $this->getFields() ){ 
-      foreach($fields as $field => $v){
-        if ( !$this->hasField($field) ){
-          $this->{$field} = null;
-        }
-      }
-    }
-  }
+  // public static function create($name)
+  // {
+    // $Class = get_called_class();
+    // return new $Class();
+  // }
   
   /**
-   * Magic method to return some protected property values
+   * Magic method to get a row field value
    *
-   * Returns null if the property is not set.
-   * 
-   * @param   string            $name  The name of the property to return
-   * @return  string|null       Value or null if the property is not set
-   * @throw   RuntimeException  If property is not set
-   * @deprecated
+   * @param  string  $name  Field name
+   * @return mixed   The value or null if the property is not set
    */
   public function __get($name)
   {
-    switch($name){
-      case 'db':
-        return $this->getDb();
-      
-      case 'tbl_name':
-        return $this->getTblName();
-      
-      case 'tbl':
-        return $this->getTbl();
-      
-      case 'tbl_key':
-        return $this->getTblKey();
-      
-      case 'hasBeenModified':
-        return $this->recordWasModified();
-      
-      case 'errors':
-        return $this->getErrors();
-      
-      default:
-        // $this->get($name);
-        throw new RuntimeException('Cannot access/get property ' . __CLASS__ . '::' . $name);
-    }
+    debugMe('Still using '.$this->tbl.'::__get for '.$name);
+    return $this->row->get($name);
   }
   
   /**
-   * {@inheritDoc}
+   * Magic method to set a row field value
+   *
+   * @param  string  $name  Field name
+   * @return mixed   The value or null if the property is not set
    */
+  public function __set($name, $value)
+  {
+    debugMe('Still using '.$this->tbl.'::__set for '.$name);
+    return $this->row->set($name, $value);
+  }
+  
+  public function setDb(DatabaseInterface $db)
+  {
+    $this->db = $db;
+    return $this;
+  }
+  
+  public function setTblName(string $tbl_name)
+  {
+    $this->tbl_name = $tbl_name;
+    return $this;
+  }
+  
+  public function setTblKey(string $tbl_key)
+  {
+    $this->tbl_key = $tbl_key;
+    return $this;
+  }
+  
+  public function setProperties($properties)
+  {
+    $this->row->setProperties($properties);
+    return $this;
+  }
+  
   public function getDb()
   {
     return $this->db;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function getTblName()
   {
     return $this->tbl_name;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function getTbl()
   {
     return $this->tbl;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function getTblKey()
   {
     return $this->tbl_key;
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function setProperties($properties)
+  public function getRow()
   {
-    if ( is_array($properties) || is_object($properties) ){
-      foreach((array)$properties as $k => $v){
-        $this->set($k, $v);
-      }
-      return true;
-    }
-    
-    return false;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  public function getProperties()
-  {
-    $vars = get_object_vars($this);
-    
-    foreach($vars as $key => $value){
-      if ( '_' === substr($key, 0, 1) ){
-        unset($vars[$key]);
-        continue;
-      }
-      
-      if ( in_array($key, $this->filterGetProperties(['db', 'tbl', 'tbl_name', 'tbl_key', 'hasBeenModified', 'errors'])) ){
-        unset($vars[$key]);
-        continue;
-      }
-    }
-    
-    return $vars;
+    return $this->row;
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function set($field, $value=null)
+  public function getProperties($object=false)
   {
-    $this->{$field} = $value;
+    return $this->row->all($object);
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function get($field, $default=null)
-  {
-    if ( isset($this->{$field}) ){
-      return $this->{$field};
-    }
-    return $default;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function setError($error)
-  {
-    if ( !($error instanceof Exception) && is_string($error) ){
-      $error = new Exception($error);
-    }
-    
-    array_push($this->errors, $error);
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function getErrors()
-  {
-    return $this->errors;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function getError($i=null, $toString=true)
-  {
-    if ( $i === null ){
-      $error = end($this->errors);
-    }
-    else {
-      if ( !array_key_exists($i, $this->errors) ){
-        return false;
-      }
-      
-      $error = $this->errors[$i];
-    }
-    
-    if ( $error instanceof Exception ){
-      return $error->getMessage();
-    }
-    
-    return $error;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function getErrorsAsString($glue='<br />')
-  {
-    $errors = $this->errors;
-    
-    foreach($errors as &$error){
-      $error = $error->getMessage();
-    }
-    
-    return implode($glue, $errors);
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function filterGetProperties(array $properties=[])
-  {
-    return $properties;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function recordWasModified()
-  {
-    return $this->hasBeenModified;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function rowIsDisabled($id)
-  {
-    return false;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
   public function getPreviousVersion()
   {
     $this->versionAble(false);
     
     $vTable = Table('version');
+    $db = $vTable->getDb();
     
-    $query = $this->db->getQuery(true);
-    $query->select('id');
-    $query->from($vTable->getTbl());
-    $query->where($this->db->qn('table_name').' = '.$this->db->q($this->tbl));
-    $query->where($this->db->qn('row_id').' = '.(int)$this->id);
-    $query->order($this->db->qn('versionNum').' DESC');
-    $this->db->setQuery($query);
-    $versionNum = (int)$this->db->loadResult();
+    $db->setQuery(
+      $db->getQuery(true)
+        ->select('id')
+        ->from($vTable->getTbl())
+        ->where($db->qn('table_name').' = '.$db->q($this->tbl))
+        ->where($db->qn('row_id').' = '.(int)$this->row->get($this->tbl_key))
+        ->order($db->qn('versionNum').' DESC')
+    );
+    $versionNum = (int)$db->loadResult();
     return $versionNum;
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function saveAssociations($right, $left_id, array $right_items, $clear=true, $order=false)
-  {
-    $query = $this->db->getQuery(true);
-    
-    if ( $clear ){
-      // remove previous associations
-      $query->clear();
-      $query->delete($this->db->qn($this->tbl.'_'.$right));
-      $query->where($this->db->qn('id_'.$this->tbl_name).'='.$left_id);
-      $this->db->setQuery($query);
-      $this->db->execute();
-    }
-    
-    if ( !empty($right_items) ){
-      if ( $order && !$clear ){
-        // get the last set ordering value
-        $query->clear();
-        $query->select('MAX(ordering)');
-        $query->from($this->db->qn($this->tbl.'_'.$right));
-        $query->where('id_'.$this->tbl_name.'='.$left_id);
-        $this->db->setQuery($query);
-        $ordering = (int)$this->db->loadResult();
-      }
-      else {
-        $ordering = 0;
-      }
-      
-      // add the associated items
-      $query->clear();
-      $query->insert($this->db->qn($this->tbl.'_'.$right));
-      
-      if ( $order ){
-        $query->columns($this->db->qn('id_'.$this->tbl_name).', '.$this->db->qn('id_'.$right).', '.$this->db->qn('ordering'));
-        foreach($right_items as $right_id){
-          $query->values($left_id.','.(int)$right_id.','.++$ordering);
-        }
-      }
-      else {
-        $query->columns($this->db->qn('id_'.$this->tbl_name).', '.$this->db->qn('id_'.$right));
-        foreach($right_items as $right_id){
-          $query->values($left_id.','.(int)$right_id);
-        }
-      }
-      
-      $this->db->setQuery($query);
-      $this->db->execute();
-    }
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function reset()
-  {
-    // Get the default values for the class from the table.
-    foreach ($this->getFields() as $k => $v){
-      // If the property is not the primary key or private, reset it.
-      if ( $k != $this->tbl_key && (strpos($k, '_') !== 0) ){
-        $this->$k = $v->Default;
-      }
-    }
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function load($keys=null, $reset=true, $clean=true)
-  {
-    if ( empty($keys) ){
-      $keyName  = $this->tbl_key;
-      $keyValue = $this->$keyName;
-
-      if ( empty($keyValue) ){
-        return true;
-      }
-      
-      $keys = [ $keyName => $keyValue ];
-    }
-    elseif ( !is_array($keys) ){
-      $keys = [ $this->tbl_key => $keys ];
-    }
-    
-    if ( $reset ){
-      $this->reset();
-    }
-    
-    $fields = array_keys($this->getProperties());
-    
-    $query = $this->db->getQuery(true);
-    $query->select('*');
-    $query->from($this->tbl);
-    
-    foreach($keys as $field => $value){
-      if ( !in_array($field, $fields) ){
-        throw new TableException(sprintf('Missing field %s in %s', $field, get_class($this)));
-      }
-      $query->where($this->db->qn($field).'='.$this->db->q($value));
-    }
-
-    $this->db->setQuery($query);
-    $row = $this->db->loadAssoc();
-    
-    if ( empty($row) ){
-      $this->setError(DatabaseHelper::getTranslation('ERROR_EMPTY_ROW'));
-      return false;
-    }
-    
-    if ( $this->bind($row) ){
-      // if ( $clean ){
-        $this->setFieldsTypeByName();
-      // }
-      return true;
-    }
-    
-    return false;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function loadBySlug($slug)
-  {
-    $this->slugAble(false);
-    return $this->load(['slug'=>$slug]);
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
   public function getByCategory($id_category)
   {
     $this->categorizeAble(false);
     
-    $query = $this->db->getQuery(true);
-    $query->select('id');
-    $query->from($this->tbl);
-    $query->where('id_category='.(int)$id_category);
-    $this->db->setQuery($query);
+    $this->db->setQuery(
+      $this->db->getQuery(true)
+        ->select('id')
+        ->from($this->tbl)
+        ->where('id_category='.(int)$id_category)
+    );
+    
     $items = (array)$this->db->loadColumn();
     
     return $items;
+  }
+  
+  public function hasField($fields)
+  {
+    if ( !is_array($fields) ){
+      $fields = [ $fields ];
+    }
+    
+    foreach($fields as $field){
+      if ( !in_array($field, $this->getFieldNames()) ){
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  public function hasChildren($pk=null, $field='parent_id')
+  {
+    if ( !$this->realPkSelection($pk) ){
+      return false;
+    }
+    
+    return ( $this->countChildren($pk, $field) > 0 );
+  }
+  
+  public function countChildren($pk=null, $field='parent_id')
+  {
+    if ( !$this->hasField($field) ){
+      throw new TableException('Table doesn\'t support parenting ['.$this->tbl.']');
+    }
+    
+    if ( !$this->realPkSelection($pk) ){
+      return false;
+    }
+    
+    $this->db->setQuery(
+      $this->db->getQuery(true)
+        // ->select('COUNT(DISTINCT('.$this->db->qn($this->tbl_key).'))')
+        ->select('COUNT('.$this->tbl_key.')')
+        ->from($this->tbl)
+        ->where($field.'='.$this->db->q($pk))
+    );
+    
+    $count = (int)$this->db->loadResult();
+    
+    return $count;
+  }
+  
+  public function recordWasModified()
+  {
+    return $this->hasBeenModified;
+  }
+  
+  public function rowIsDisabled($id)
+  {
+    return false;
+  }
+  
+  public function trashedItems(array $conditions=[])
+  {
+    $conditions[] = $this->db->qn('deleted').' != '.$this->db->q($this->db->getNullDate());
+    // $conditions[] = $this->db->qn('deleted_by').' <> 0';
+    
+    $query = $this->db->getQuery(true);
+    $query->select($this->db->qn('id'));
+    $query->from($this->db->qn($this->tbl));
+    $query->where($conditions);
+    
+    $this->db->setQuery($query);
+    return (array)$this->db->loadColumn();
   }
   
   public function isDuplicate(array $properties, $id=0)
@@ -488,19 +290,102 @@ abstract class Table implements TableInterface
     return $id;
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function save(array $src, array $ignore=[])
+  
+  public function init()
   {
-    $oldValues=[];
+    $this->tbl = '#__'.$this->tbl_name;
     
-    if ( !$this->bind($src, $ignore, $oldValues) ){
+    $this->row = TableRow::create();
+    
+    foreach($this->getFieldNames() as $field){
+      $this->row->set($field, null);
+    }
+    
+    return $this;
+  }
+  
+  public function reset()
+  {
+    $this->row->set($this->tbl_key, 0);
+    
+    foreach($this->getFields() as $fieldName => $fieldInfos){
+      if ( $fieldName != $this->tbl_key ){
+        $this->row->set($fieldName, $fieldInfos->Default);
+      }
+    }
+  }
+  
+  public function load($keys=null, $reset=true, $clean=true)
+  {
+    if ( empty($keys) ){
+      $keyValue = $this->row->get($this->tbl_key);
+
+      if ( empty($keyValue) ){
+        return true;
+      }
+      
+      $keys = [ $this->tbl_key => $keyValue ];
+    }
+    elseif ( !is_array($keys) ){
+      $keys = [ $this->tbl_key => $keys ];
+    }
+    
+    if ( $reset ){
+      $this->reset();
+    }
+    
+    // $fields = array_keys($this->row->all());
+    $fields = $this->getFieldNames();
+    
+    $query = $this->db->getQuery(true)
+      // ->select('*')
+      ->select(implode(',', $fields))
+      ->from($this->tbl);
+    
+    foreach($keys as $field => $value){
+      if ( !in_array($field, $fields) ){
+        throw new TableException(sprintf('Field %s doesn\'t exist in %s', $field, get_class($this)));
+      }
+      $query->where($this->db->qn($field).'='.$this->db->q($value));
+    }
+    
+    $this->db->setQuery($query);
+    $row = $this->db->loadAssoc();
+    
+    if ( empty($row) ){
+      $this->setError(DatabaseHelper::getTranslation('EMPTY_ROW').' in '.$this->tbl);
       return false;
     }
     
-    if ( !$this->hasBeenModified($oldValues) ){
-      // $this->setError(DatabaseHelper::getTranslation('ERROR_RECORD_UNCHANGED'));
+    if ( $this->bind($row) ){
+      // if ( $clean ){
+        $this->setFieldsTypeByName();
+      // }
+      return true;
+    }
+    
+    return false;
+  }
+  
+  public function loadBySlug($slug)
+  {
+    $this->slugAble(false);
+    return $this->load(['slug'=>$slug]);
+  }
+  
+  
+  public function save(array $src, array $ignore=[])
+  {
+    $oldRow = clone $this->row;
+    
+    if ( $pk = $this->row->get($this->tbl_key) ){
+      $src[$this->tbl_key] = $pk;
+    }
+    
+    $this->bind($src, $ignore);
+    
+    if ( !$this->hasBeenModified($oldRow) ){
+      // $this->setError(DatabaseHelper::getTranslation('RECORD_UNCHANGED'));
       return true;
     }
     
@@ -515,33 +400,14 @@ abstract class Table implements TableInterface
     return true;
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function bind(array $src, array $ignore=[], array &$oldValues=[])
+  protected function bind(array $src, array $ignore=[])
   {
-    if ( !is_object($src) && !is_array($src) ){
-      throw new TableException(sprintf('Row bind failed in %', get_class($this)));
-    }
-    
-    if ( is_object($src) ){
-      $src = get_object_vars($src);
-    }
-
-    if ( !is_array($ignore) ){
-      $ignore = explode(' ', $ignore);
-    }
-    
-    foreach($this->getProperties() as $k => $v){
-      if ( intval($this->id) > 0 ){
-        $oldValues[$k] = $this->get($k);
-      }
-      
-      if ( in_array($k, $ignore) || !isset($src[$k]) ){
+    foreach($this->getFieldNames() as $fieldName){
+      if ( in_array($fieldName, $ignore) || !isset($src[$fieldName]) ){
         continue;
       }
       
-      $this->set($k, $src[$k]);
+      $this->row->set($fieldName, $src[$fieldName]);
     }
     
     $this->setFieldsTypeByName();
@@ -549,73 +415,188 @@ abstract class Table implements TableInterface
     return true;
   }
   
-  /**
-   * {@inheritDoc}
+  /** 
+   * Perform needed checkups 
+   * 
+   * @return bool  True if the record was modified and must be stored.
    */
-  public function delete($pk=null)
+  protected function check()
   {
-    $k = $this->tbl_key;
-    
-    if ( $pk === null ){
-      $pk = $this->{$k};
-    }
-    
-    if ( $pk === null ){
-      $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
-      return false;
-    }
-    
-    if ( $this->statesAble() ){
-      $this->load($pk);
-      
-      if ( $this->deleted !== '' && $this->deleted !== $this->db->getNullDate() ){
-        $this->setError(DatabaseHelper::getTranslation('ERROR_ITEM_ALREADY_DELETED'));
+    if ( $this->slugAble() ){
+      if ( !$this->checkTitleUnique($this->row->get('id'), $this->row->get('title')) ){
         return false;
       }
       
-      if ( $this->modified === '' || $this->modified === $this->db->getNullDate() ){
-        $this->modified    = DateObject::getInstance()->format($this->db->getDateFormat());
-        $this->modified_by = $this->db->getUid();
+      if ( !$this->checkSlugUnique($this->row->get('id'), $this->row->get('slug')) ){
+        return false;
       }
-      
-      $this->deleted    = DateObject::getInstance()->format($this->db->getDateFormat());
-      $this->deleted_by = $this->db->getUid();
-      
-      if ( $this->publishingAble() ){
-        $this->published = 0; 
-      }
-      
-      return ( $this->store() );
     }
     
-    $query = $this->db->getQuery(true);
-    $query->delete();
-    $query->from($this->tbl);
-    $query->where($this->tbl_key.' = '.$this->db->q($pk));
+    if ( $this->orderingAble() && intval($this->row->get('ordering')) === 0 ){
+      $conditions = $this->getReorderConditions();
+      $this->row->set('ordering', $this->getNextOrder($conditions));
+    }
     
-    $this->db->setQuery($query);
-    $this->db->execute();
+    // if ( $this->publishingAble() ){
+      // $this->row->set('published', (int)$this->row->get('published')); 
+    // }
     
-    if ( $this->orderingAble() ){
-      $this->reorder($this->getReorderConditions());
+    if ( $this->statesAble() ){
+      $userId   = $this->db->getUid();
+      $nullDate = $this->db->getNullDate();
+      $nowDate  = DateObject::getInstance()->format($this->db->getDateFormat());
+      
+      if ( !$this->row->get($this->tbl_key) ){
+        $this->row->set('created', $nowDate);
+        $this->row->set('created_by', $userId); 
+        
+        // $this->row->set('modified', $nullDate);
+        // $this->row->set('deleted',  $nullDate);
+      }
+      else {
+        $this->row->set('modified', $nowDate);
+        $this->row->set('modified_by', $userId); 
+      }
+      
+      // if ( !$this->row->get('modified') ){
+        // $this->row->set('modified', $nullDate);
+      // }
+      
+      // if ( !$this->row->get('deleted') ){
+        // $this->row->set('deleted', $nullDate);
+      // }
+    }
+    
+    if ( $this->versionAble() ){
+      $version = (int)$this->row->get('version');
+      $this->row->set('version', ++$version);
     }
     
     return true;
   }
   
-  /**
-   * {@inheritDoc}
+  /** 
+   * Store the record
+   * 
+   * @param  bool  $updateNulls    True to update properties that are null
+   * @return bool  True if the record was successfully stored.
    */
-  public function untrash($pk=null)
+  protected function store($updateNulls=false)
   {
-    $k = $this->tbl_key;
+    $row = TableRow::create();
     
-    if ( $pk === null ){
-      $pk = $this->{$k};
+    foreach($this->getFields() as $fieldName => $fieldInfos){
+      $fieldValue = $this->row->get($fieldName);
+      
+      switch($fieldInfos->Type){
+        case 'bigint':
+        case 'mediumint':
+        case 'smallint':
+        case 'tinyint':
+          $fieldValue = (int)$fieldValue;
+          break;
+        
+        case 'datetime':
+        case 'timestamp':
+          if ( !$fieldValue ){
+            $fieldValue = $this->db->getNullDate(true);
+          }
+          break;
+        
+        case 'date':
+          if ( !$fieldValue ){
+            $fieldValue = $this->db->getNullDate(false);
+          }
+          break;
+        
+        case 'time':
+          if ( !$fieldValue ){
+            $fieldValue = '00:00:00';
+          }
+          break;
+      }
+      
+      $row->set($fieldName, $fieldValue);
     }
     
-    if ( $pk === null ){
-      $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
+    // debugMe($row->all(), 'STORE')->end();
+    
+    if ( $row->get($this->tbl_key) ){
+      $ret = $this->db->updateObject($this->tbl, $row, $this->tbl_key, $updateNulls);
+    }
+    else {
+      $ret = $this->db->insertObject($this->tbl, $row, $this->tbl_key);
+      $this->row->set($this->tbl_key, (int)$row->get($this->tbl_key));      
+    }
+    
+    if ( $ret ){
+      if ( $this->orderingAble() ){
+        $this->reorder( $this->getReorderConditions() );
+      }
+      return true;
+    }
+    
+    return false;
+  }
+  
+  
+  public function delete($pk=null)
+  {
+    if ( !$this->realPkSelection($pk) ){
+      return false;
+    }
+    
+    $this->load($pk);
+    
+    if ( $this->statesAble() ){
+      if ( $this->row->get('deleted') && $this->row->get('deleted') !== $this->db->getNullDate() ){
+        $this->setError(DatabaseHelper::getTranslation('ITEM_ALREADY_DELETED'));
+        return false;
+      }
+      
+      if ( $this->row->get('modified') && $this->row->get('modified') === $this->db->getNullDate() ){
+        $this->row->set('modified', DateObject::getInstance()->format($this->db->getDateFormat()));
+        $this->row->set('modified_by', $this->db->getUid());
+      }
+      
+      $this->row->set('deleted', DateObject::getInstance()->format($this->db->getDateFormat()));
+      $this->row->set('deleted_by', $this->db->getUid());
+      
+      if ( $this->publishingAble() ){
+        $this->row->set('published', 0); 
+      }
+      
+      return ( $this->store() );
+    }
+    
+    if ( $this->orderingAble() ){
+      $reorderConditions = $this->getReorderConditions();
+    }
+    else {
+      $reorderConditions = [];
+    }
+    
+    $this->db->setQuery(
+      $this->db->getQuery(true)
+        ->delete()
+        ->from($this->tbl)
+        ->where($this->tbl_key.' = '.$pk)
+    );
+    $this->db->execute();
+    
+    // debugMe($this->orderingAble());
+    // debugMe($this->getReorderConditions())->end();
+    
+    if ( $this->orderingAble() ){
+      $this->reorder($reorderConditions);
+    }
+    
+    return true;
+  }
+  
+  public function untrash($pk=null)
+  {
+    if ( !$this->realPkSelection($pk) ){
       return false;
     }
     
@@ -635,33 +616,23 @@ abstract class Table implements TableInterface
     return true;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function shred($pk=null)
   {
-    $k = $this->tbl_key;
-    
-    if ( $pk === null ){
-      $pk = $this->{$k};
-    }
-    
-    if ( $pk === null ){
-      $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
+    if ( !$this->realPkSelection($pk) ){
       return false;
     }
     
     if ( $this->statesAble() ){
       $this->load($pk);
       
-      $query = $this->db->getQuery(true);
-      $query->delete();
-      $query->from($this->tbl);
-      $query->where($this->tbl_key.' = '.$this->db->q($pk));
-      
-      $this->db->setQuery($query);
+      $this->db->setQuery(
+        $this->db->getQuery(true)
+          ->delete()
+          ->from($this->tbl)
+          ->where($this->tbl_key.' = '.$this->db->q($pk))
+      );
       $this->db->execute();
-    
+      
       if ( $this->orderingAble() ){
         $this->reorder($this->getReorderConditions());
       }
@@ -670,9 +641,6 @@ abstract class Table implements TableInterface
     return true;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function revert($pk, array $data)
   {
     if ( !$this->load($pk, true, false) ){
@@ -680,29 +648,19 @@ abstract class Table implements TableInterface
     }
     
     foreach($data as $key => $value){
-      $this->{$key} = $value;
+      $this->row->set($key, $value);
     }
     
-    $this->id = (int)$pk;
+    $this->row->set($this->tbl_key, (int)$pk);
     
     return $this->store();
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function publish($pk=null, $state=1)
   {
     $this->publishingAble(false);
     
-    $k = $this->tbl_key;
-    
-    if ( empty($pk) ){
-      $pk = $this->{$k};
-    }
-    
-    if ( $pk === null ){
-      $this->setError(DatabaseHelper::getTranslation('NO_ITEM_SELECTED'));
+    if ( !$this->realPkSelection($pk) ){
       return false;
     }
     
@@ -710,225 +668,33 @@ abstract class Table implements TableInterface
     
     if ( $this->statesAble() ){
       if ( $this->deleted !== '' && $this->deleted !== $this->db->getNullDate() ){
-        $this->setError(DatabaseHelper::getTranslation('ERROR_DELETED_SO_CANNOT_PUBLISH'));
+        $this->setError(DatabaseHelper::getTranslation('DELETED_SO_CANNOT_PUBLISH'));
         return false;
       }
     }
     
-    $query = $this->db->getQuery(true);
-    $query->update($this->tbl);
-    $query->set('published='.(int)$state);
-    $query->where($this->tbl_key.' = '.$this->db->q($pk));
+    $query = $this->db->getQuery(true)
+      ->update($this->tbl)
+      ->set('published='.(int)$state)
+      ->where($this->tbl_key.' = '.$this->db->q($pk));
     
     if ( $this->statesAble() ){
-      $query->set('modified='.DateObject::getInstance()->format($this->db->getDateFormat()));
-      $query->set('modified_by='.$this->db->q($this->db->getUid()));
+      $query
+        ->set('modified='.$this->db->q(DateObject::getInstance()->format($this->db->getDateFormat())))
+        ->set('modified_by='.$this->db->q($this->db->getUid()));
     }
     
     $this->db->setQuery($query);
     $this->db->execute();
     
-    if ( $this->$k === $pk ){
+    if ( (int)$this->row->get($this->tbl_key) === (int)$pk ){
       $this->published = $state;
     }
     
     return true;
   }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function changeorder($pk, $to, $minOrder=1, $maxOrder=0)
-  {
-    $this->orderingAble(false);
-    
-    $k = $this->tbl_key;
-    
-    if ( $pk === null ){
-      $pk = $this->{$k};
-    }
-    
-    if ( !$this->load($pk) ){
-      return false;
-    }
-    
-    $to        = (int)$to;
-    $from      = (int)$this->ordering;
-    $direction = $from > $to ? 'down' : 'up';
-    
-    if ( $from === $to ){
-      return true;
-    }
-    
-    $where = $this->getReorderConditions();
-    $where[] = $k.' != '.$pk;
-    $where[] = 'ordering <> 0';
-    if ( $minOrder && $maxOrder ){
-      $where[] = 'ordering >= '.$minOrder;
-      $where[] = 'ordering <= '.$maxOrder;
-    }
-    
-    $whereBefore = $whereAfter = $where;
-    
-    if ( $direction === 'down' ){
-      $whereBefore[] = 'ordering < '.$to;
-      $whereAfter[]  = 'ordering >= '.$to;
-    }
-    else {
-      $whereBefore[] = 'ordering <= '.$to;
-      $whereAfter[]  = 'ordering > '.$to;
-    }
-    
-    $itemsBefore = [];
-    $itemsAfter  = [];
-    
-    // get items before the moved element
-    $query = $this->db->getQuery(true);
-    $query->select($k.', ordering');
-    $query->from($this->tbl);
-    $query->where($whereBefore);
-    $query->order('ordering ASC');
-    $this->db->setQuery($query);
-    $itemsBefore = $this->db->loadObjectList();
-    
-    // get items after the moved element
-    $query = $this->db->getQuery(true);
-    $query->select($k.', ordering');
-    $query->from($this->tbl);
-    $query->where($whereAfter);
-    $query->order('ordering ASC');
-    $this->db->setQuery($query);
-    $itemsAfter = $this->db->loadObjectList();
-    
-    // reorder
-    $i=$minOrder;
-    
-    foreach($itemsBefore as $row){
-      $query = $this->db->getQuery(true);
-      $query->update($this->tbl);
-      $query->set('ordering='.$i);
-      $query->where($k.'='.$row->{$k});
-      $this->db->setQuery($query);
-      $this->db->execute();
-      $i++;
-    }
-    
-    // here is the reordered element
-    $query = $this->db->getQuery(true);
-    $query->update($this->tbl);
-    $query->set('ordering='.$i);
-    $query->where($k.'='.$pk);
-    $this->db->setQuery($query);
-    $this->db->execute();
-    $i++;
-    
-    foreach($itemsAfter as $row){
-      $query = $this->db->getQuery(true);
-      $query->update($this->tbl);
-      $query->set('ordering='.$i);
-      $query->where($k.'='.$row->{$k});
-      $this->db->setQuery($query);
-      $this->db->execute();
-      $i++;
-    }
-    
-    // set the new item order
-    $this->ordering = $to;
-    
-    return true;
-  }
   
-  /**
-   * {@inheritDoc}
-   */
-  public function reorder($where='')
-  {
-    $this->orderingAble(false);
-    
-    $k = $this->tbl_key;
-    
-    $query = $this->db->getQuery(true);
-    $query->select($this->tbl_key . ', ordering');
-    $query->from($this->tbl);
-    $query->where('ordering >= 0');
-    $query->order('ordering');
-    
-    if ( $where ){
-      $query->where($where);
-    }
-    
-    $this->db->setQuery($query);
-    $rows = $this->db->loadObjectList();
-    
-    foreach($rows as $i => $row){
-      if ( $row->ordering >= 0 ){
-        if ( $row->ordering != $i+1 ){
-          $query = $this->db->getQuery(true);
-          $query->update($this->tbl);
-          $query->set('ordering='.($i+1));
-          $query->where($this->tbl_key.' = '.$this->db->q($row->$k));
-          $this->db->setQuery($query);
-          $this->db->execute();
-        }
-      }
-    }
-    
-    return true;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function trashedItems(array $conditions=[])
-  {
-    $conditions[] = $this->db->qn('deleted').' != '.$this->db->q($this->db->getNullDate());
-    // $conditions[] = $this->db->qn('deleted_by').' <> 0';
-    
-    $query = $this->db->getQuery(true);
-    $query->select($this->db->qn('id'));
-    $query->from($this->db->qn($this->tbl));
-    $query->where($conditions);
-    
-    $this->db->setQuery($query);
-    return (array)$this->db->loadColumn();
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function getNextOrder($where = '')
-  {
-    $this->orderingAble(false);
-    
-    $query = $this->db->getQuery(true);
-    $query->select('MAX(ordering)');
-    $query->from($this->tbl);
-
-    if ( $where ){
-      $query->where($where);
-    }
-    
-    $this->db->setQuery($query);
-    $max = (int) $this->db->loadResult();
-    
-    return ($max + 1);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  public function getReorderConditions()
-  {
-    $conditions = [];
-    if ( $this->categorizeAble() ){
-      $conditions[] = 'id_category='.$this->db->q($this->id_category);
-    }
-    return $conditions;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
   public function checkTitleUnique($id, $title, array $conditions=[])
   {
     $conditions[] = $this->db->qn('title').'='.$this->db->q($title);
@@ -947,7 +713,7 @@ abstract class Table implements TableInterface
     $this->db->setQuery($query);
     $id = (int)$this->db->loadResult();
     if ( $id > 0 ){
-      $this->setError(DatabaseHelper::getTranslation('ERROR_TITLE_EXISTS'));
+      $this->setError(DatabaseHelper::getTranslation('TITLE_EXISTS'));
       return false;
     }
     
@@ -977,26 +743,8 @@ abstract class Table implements TableInterface
     $this->db->setQuery($query);
     $id = (int)$this->db->loadResult();
     if ( $id > 0 ){
-      $this->setError(DatabaseHelper::getTranslation('ERROR_SLUG_EXISTS'));
+      $this->setError(DatabaseHelper::getTranslation('SLUG_EXISTS'));
       return false;
-    }
-    
-    return true;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function hasField($fields)
-  {
-    if ( !is_array($fields) ){
-      $fields = [ $fields ];
-    }
-    
-    foreach($fields as $field){
-      if ( !property_exists($this, $field) ){
-        return false;
-      }
     }
     
     return true;
@@ -1011,7 +759,7 @@ abstract class Table implements TableInterface
     $able = $this->hasField(['slug', 'title']);
     
     if ( $return === false && !$able ){
-      throw new TableException('Table doesn\'t support slug ['.get_class($this).']');
+      throw new TableException('Table doesn\'t support slug ['.$this->tbl.']');
     }
     
     return $able;
@@ -1025,7 +773,7 @@ abstract class Table implements TableInterface
     $able = $this->hasField(['id_category']);
     
     if ( $return === false && !$able ){
-      throw new TableException('Table doesn\'t support categories ['.get_class($this).']');
+      throw new TableException('Table doesn\'t support categories ['.$this->tbl.']');
     }
     
     return $able;
@@ -1040,12 +788,12 @@ abstract class Table implements TableInterface
     
     if ( $able === true ){
       if ( !$this->hasField('created_by') || !$this->hasField('modified') || !$this->hasField('modified_by') || !$this->hasField('deleted') || !$this->hasField('deleted_by') ){
-        throw new TableException('Table should support states but all 6 fields are not available ['.get_class($this).']');
+        throw new TableException('Table should support states but all 6 fields are not available ['.$this->tbl.']');
       }      
     }
     
     if ( $return === false && $able === false ){
-      throw new TableException('Table doesn\'t support states ['.get_class($this).']');
+      throw new TableException('Table doesn\'t support states ['.$this->tbl.']');
     }
     
     return $able;
@@ -1058,22 +806,8 @@ abstract class Table implements TableInterface
   {
     $able = $this->hasField('published');
     if ( $return === false && !$able ){
-      throw new TableException('Table doesn\'t support publishing ['.get_class($this).']');
+      throw new TableException('Table doesn\'t support publishing ['.$this->tbl.']');
     }
-    return $able;
-  }
-  
-  /**
-   * {@inheritDoc}
-   */
-  public function orderingAble($return=true)
-  {
-    $able = $this->hasField('ordering');
-    
-    if ( $return === false && !$able ){
-      throw new TableException('Table doesn\'t support ordering ['.get_class($this).']');
-    }
-    
     return $able;
   }
   
@@ -1085,7 +819,7 @@ abstract class Table implements TableInterface
     $able = $this->hasField('version');
     
     if ( $return === false && !$able ){
-      throw new TableException('Table doesn\'t support version ['.get_class($this).']');
+      throw new TableException('Table doesn\'t support versioning ['.$this->tbl.']');
     }
     
     return $able;
@@ -1094,188 +828,455 @@ abstract class Table implements TableInterface
   /** 
    * Chec if the record has been modified.
    * 
-   * @param   array     $oldValues  Key/Value pairs of old property values 
-   * @return   bool      True for a new record or if no modifications were found.
+   * @param  array     $oldValues  Key/Value pairs of old property values 
+   * @return bool      True for a new record or if no modifications were found.
    */
-  protected function hasBeenModified(array $oldValues)
+  protected function hasBeenModified(TableRow $oldRow)
   {
-    if ( intval($this->id) === 0 || empty($oldValues) ){
-      return true;
-    }
-    
-    $props = $this->getProperties();
-    
-    foreach($props as $k => $v){
-      if ( isset($oldValues[$k]) && $oldValues[$k] == $v ){
-        unset($props[$k]);
-        continue;
-      }
-    }
-    
-    $this->hasBeenModified = ( !empty($props) > 0 );
-    
+    $diff = $this->row->diff($oldRow);
+    $this->hasBeenModified = ( count($diff) > 0 );
     return $this->hasBeenModified; 
-  }
-  
-  /** 
-   * Perform needed checkups 
-   * 
-   * @param   bool  $beenModified Has the record been modified ?
-   * @return   bool  True if the record was modified and must be stored.
-   */
-  protected function check()
-  {
-    if ( $this->slugAble() ){
-      if ( !$this->checkTitleUnique($this->id, $this->title) ){
-        return false;
-      }
-      
-      if ( !$this->checkSlugUnique($this->id, $this->slug) ){
-        return false;
-      }
-    }
-    
-    if ( $this->orderingAble() && intval($this->ordering) === 0 ){
-      $conditions = $this->getReorderConditions();
-      $this->ordering = $this->getNextOrder($conditions);
-    }
-    
-    // if ( $this->publishingAble() ){
-      // $this->published = (int)$this->published;
-    // }
-    
-    if ( $this->statesAble() ){
-      $user = $this->db->getUid();
-      
-      if ( empty($this->id) ){
-        $this->created    = DateObject::getInstance()->format($this->db->getDateFormat());
-        $this->created_by = $this->db->getUid(); 
-        
-        // $this->modified   = $this->db->getNullDate();
-        // $this->deleted    = $this->db->getNullDate();
-      }
-      else {
-        // $this->created     = null; 
-        // $this->created_by  = null;
-        
-        $this->modified    = DateObject::getInstance()->format($this->db->getDateFormat()); 
-        $this->modified_by = $this->db->getUid(); 
-      }
-      
-      if ( empty($this->modified) ){
-        $this->modified = $this->db->getNullDate();
-      }
-      
-      if ( empty($this->deleted) ){
-        $this->deleted = $this->db->getNullDate();
-      }
-    }
-    
-    if ( $this->versionAble() ){
-      $this->version++;
-    }
-    
-    return true;
-  }
-  
-  /** 
-   * Store the record
-   * 
-   * @param   bool  $updateNulls    True to update properties that are null
-   * @return   bool  True if the record was successfully stored.
-   */
-  protected function store($updateNulls=false)
-  {
-    $k = $this->tbl_key;
-    
-    $ret = false;
-    $row = new DataObject();
-    foreach($this->getFields() as $fieldName => $fieldInfos){
-      if ( preg_match("/^(big|medium|small|tiny)?int/i", $fieldInfos->Type) ){
-        $row->set($fieldName, (int)$this->get($fieldName));
-        continue;
-      }
-      
-      if ( preg_match("/^(datetime|date|time|timestamp)$/i", $fieldInfos->Type) ){
-        if ( !($fieldValue=$this->get($fieldName)) ){
-          $fieldValue = $this->db->getNullDate();
-        }
-        $row->set($fieldName, $fieldValue);
-        continue;
-      }
-      
-      $row->set($fieldName, $this->get($fieldName));
-    }
-    
-    if ( $this->{$k} ){
-      $ret = $this->db->updateObject($this->tbl, $row, $this->tbl_key, $updateNulls);
-    }
-    else {
-      $ret = $this->db->insertObject($this->tbl, $row, $this->tbl_key);
-      $this->set($k, (int)$row->get($k));
-    }
-    
-    if ( $ret ){
-      if ( $this->orderingAble() ){
-        $this->reorder( $this->getReorderConditions() );
-      }
-      return true;
-    }
-    
-    return false;
   }
   
   /** 
    * Get the object fields from database table columns
    * 
-   * @return   array       The list of table properties
+   * @return array       The list of table properties
    */
   protected function getFields()
   {
-    static $cache;
-
-    if ( !isset($cache) ){
-      $cache = [];
+    $fields = $this->db->getTableColumns($this->tbl);
+    
+    if ( empty($fields) ){
+      throw new TableException('Table columns not found');
     }
     
-    if ( !isset($cache[$this->tbl]) ){
-      $fields = $this->db->getTableColumns($this->tbl, false);
-      
-      if ( empty($fields) ){
-        throw new TableException('Table columns not found');
-      }
-      
-      $cache[$this->tbl] = $fields;
-    }
-    
-    return $cache[$this->tbl];
+    return $fields;
+  }
+  
+  /** 
+   * Get the list of available field names
+   * 
+   * @return array  The list of field names
+   */
+  protected function getFieldNames()
+  {
+    return array_keys($this->getFields());
   }
   
   /**
    * Set data type for known fields
    * 
-   * @return   The typed value
+   * @return The typed value
    */
   protected function setFieldsTypeByName()
   {
     foreach($this->getFields() as $fieldName => $fieldInfos){
-      $v = $this->get($fieldName);
+      $v = $this->row->get($fieldName);
       
-      if ( preg_match("/^(big|medium|small|tiny)?int/i", $fieldInfos->Type) ){
-        $this->{$fieldName} = (int)$v; 
-        continue;
+      switch($fieldInfos->Type){
+        case 'bigint':
+        case 'mediumint':
+        case 'smallint':
+        case 'tinyint':
+          $this->row->set($fieldName, (int)$v); 
+          break;
+        
+        case 'datetime':
+        case 'timestamp':
+          if ( $v === $this->db->getNullDate(true) ){
+            $this->row->set($fieldName, ''); 
+          }
+          break;
+        
+        case 'date':
+          if ( $v === $this->db->getNullDate(false) ){
+            $this->row->set($fieldName, ''); 
+          }
+          break;
+        
+        case 'time':
+          if ( $v === '00:00:00' ){
+            $this->row->set($fieldName, ''); 
+          }
+          break;
       }
       
-      if ( preg_match("/^(datetime|date|time|timestamp)$/i", $fieldInfos->Type) ){
-        if ( $this->db->getNullDate() === $v ){
-          $this->{$fieldName} = '';
-        }
-        continue;
-      }
-    
       if ( $fieldName === 'published' ){
-        $this->{$fieldName} = (bool)$v;
+        $this->row->set($fieldName, (bool)$v); 
       }
     }
   }  
+  
+  /**
+   * Set the real pk request value
+   * 
+   * If no pk was requested it check if a row is currently loaded
+   * 
+   * @return bool
+   */
+  protected function realPkSelection(&$pk)
+  {
+    if ( null === $pk ){
+      $pk = $this->row->get($this->tbl_key);
+    }
+    
+    if ( null === $pk ){
+      $this->setError( DatabaseHelper::getTranslation('NO_ITEM_SELECTED') );
+      return false;
+    }
+    
+    return true;
+  }
+  
+  /*==========
+   ASSOCIATION UTILITIES
+   ===========*/
+  
+  public function getAssociations($pk, $assocTbl, $callback=null, $ordered=true)
+  {
+    $associations = [];
+    
+    if ( $this->realPkSelection($pk) ){
+      if ( $this->load($pk) ){
+        $fkParts = explode('_', $this->tbl_name);
+        $fk = array_pop($fkParts);
+        
+        $query = $this->db->getQuery(true)
+          ->select('*')
+          ->from($this->tbl.'_'.$assocTbl)
+          ->where('id_'.$fk.' = '.$pk);
+        
+        if ( $ordered ){
+          if ( is_bool($ordered) ){
+            $query->order('ordering ASC');
+          }
+          else {
+            $query->order($ordered);
+          }
+        }
+        
+        $this->db->setQuery($query);
+        
+        $associations = $this->db->loadObjectList();
+        
+        if ( is_callable($callback) ){
+          foreach($associations as $row){
+            $callback($row, $this);
+          }
+        }
+      }
+    }
+    
+    $this->errors = [];
+    return $associations;
+  }
+  
+  public function saveAssociations($right, $left_id, array $right_items, $clear=true, $ordered=false)
+  {
+    if ( $clear ){
+      // remove previous associations
+      $this->db->setQuery(
+        $this->db->getQuery(true)
+          ->delete($this->tbl.'_'.$right)
+          ->where('id_'.$this->tbl_name.' = '.$left_id)
+      );
+      $this->db->execute();
+    }
+    
+    if ( !empty($right_items) ){
+      if ( $ordered && !$clear ){
+        // get the last set ordering value
+        $this->db->setQuery(
+          $this->db->getQuery(true)
+            ->select('MAX(ordering)')
+            ->from($this->tbl.'_'.$right)
+            ->where('id_'.$this->tbl_name.'='.$left_id)
+        );
+        $ordering = (int)$this->db->loadResult();
+      }
+      else {
+        $ordering = 0;
+      }
+      
+      // add the associated items
+      $query = $this->db->getQuery(true)
+        ->insert($this->tbl.'_'.$right);
+      
+      if ( $ordered ){
+        $query->columns('id_'.$this->tbl_name.', id_'.$right.', ordering');
+        foreach($right_items as $right_id){
+          $query->values($left_id.', '.(int)$right_id.', '.++$ordering);
+        }
+      }
+      else {
+        $query->columns('id_'.$this->tbl_name.', id_'.$right);
+        foreach($right_items as $right_id){
+          $query->values($left_id.', '.(int)$right_id);
+        }
+      }
+      
+      $this->db->setQuery($query);
+      $this->db->execute();
+    }
+  }
+  
+  /*==========
+   ERROR UTILITIES
+   ===========*/
+  
+  public function setError($error)
+  {
+    if ( !($error instanceof Exception) && is_string($error) ){
+      $error = new Exception($error);
+    }
+    
+    array_push($this->errors, $error);
+    
+    return $this;
+  }
+  
+  public function clearErrors()
+  {
+    $this->errors = [];
+    return $this;
+  }
+  
+  public function getErrors()
+  {
+    return $this->errors;
+  }
+  
+  public function getError($i=null, $toString=true)
+  {
+    if ( $i === null ){
+      $error = end($this->errors);
+    }
+    else {
+      if ( !array_key_exists($i, $this->errors) ){
+        return false;
+      }
+      
+      $error = $this->errors[$i];
+    }
+    
+    if ( $error instanceof Exception ){
+      return $error->getMessage();
+    }
+    
+    return $error;
+  }
+  
+  public function getErrorsAsString($glue='<br />')
+  {
+    $errors = $this->errors;
+    
+    foreach($errors as &$error){
+      $error = $error->getMessage();
+    }
+    
+    return implode($glue, $errors);
+  }
+  
+  /*==========
+   ORDERING UTILITIES
+   ===========*/
+  
+  public function setReorderConditions(array $conditions)
+  {
+    $this->reorderConditions = $conditions;
+    return $this;
+  }
+  
+  public function getNextOrder($where='')
+  {
+    $this->orderingAble(false);
+    
+    $query = $this->db->getQuery(true)
+      ->select('MAX(ordering)')
+      ->from($this->tbl);
+    
+    if ( $where ){
+      $query->where($where);
+    }
+    
+    $this->db->setQuery($query);
+    $max = (int) $this->db->loadResult();
+    
+    return ($max + 1);
+  }
+
+  public function getReorderConditions()
+  {
+    $conditions = [];
+    
+    if ( $this->categorizeAble() ){
+      $conditions[] = 'id_category='.$this->db->q($this->row->get('id_category'));
+    }
+    
+    foreach($this->reorderConditions as $field){
+      $conditions[] = $field.'='.$this->db->q($this->row->get($field));
+    }
+    
+    return $conditions;
+  }
+  
+  public function changeorder($pk, $to, $minOrder=1, $maxOrder=0)
+  {
+    $this->orderingAble(false);
+    
+    if ( !$this->realPkSelection($pk) ){
+      return false;
+    }
+    
+    if ( !$this->load($pk) ){
+      return false;
+    }
+    
+    $k         = $this->tbl_key;
+    $to        = (int)$to;
+    $from      = (int)$this->row->get('ordering');
+    $direction = $from > $to ? 'down' : 'up';
+    
+    if ( $from === $to ){
+      return true;
+    }
+    
+    $where = $this->getReorderConditions();
+    
+    $where[] = $this->tbl_key.' != '.$pk;
+    $where[] = 'ordering <> 0';
+    if ( $minOrder && $maxOrder ){
+      $where[] = 'ordering >= '.$minOrder;
+      $where[] = 'ordering <= '.$maxOrder;
+    }
+    
+    $whereBefore = $whereAfter = $where;
+    
+    if ( $direction === 'down' ){
+      $whereBefore[] = 'ordering < '.$to;
+      $whereAfter[]  = 'ordering >= '.$to;
+    }
+    else {
+      $whereBefore[] = 'ordering <= '.$to;
+      $whereAfter[]  = 'ordering > '.$to;
+    }
+    
+    $itemsBefore = [];
+    $itemsAfter  = [];
+    
+    // get items before the moved element
+    $this->db->setQuery(
+      $this->db->getQuery(true)
+        ->select($k.', ordering')
+        ->from($this->tbl)
+        ->where($whereBefore)
+        ->order('ordering ASC')
+    );
+    $itemsBefore = $this->db->loadObjectList();
+    
+    // get items after the moved element
+    $this->db->setQuery(
+      $this->db->getQuery(true)
+        ->select($k.', ordering')
+        ->from($this->tbl)
+        ->where($whereAfter)
+        ->order('ordering ASC')
+    );
+    $itemsAfter = $this->db->loadObjectList();
+    
+    // reorder
+    $i=$minOrder;
+    
+    foreach($itemsBefore as $row){
+      $this->db->setQuery(
+        $this->db->getQuery(true)
+          ->update($this->tbl)
+          ->set('ordering='.$i)
+          ->where($k.'='.$row->{$k})
+      );
+      $this->db->execute();
+      $i++;
+    }
+    
+    // here is the reordered element
+    $this->db->setQuery(
+      $this->db->getQuery(true)
+        ->update($this->tbl)
+        ->set('ordering='.$i)
+        ->where($k.'='.$pk)
+    );
+    $this->db->execute();
+    $i++;
+    
+    foreach($itemsAfter as $row){
+      $this->db->setQuery(
+        $this->db->getQuery(true)
+          ->update($this->tbl)
+          ->set('ordering='.$i)
+          ->where($k.' = '.$row->{$k})
+      );
+      $this->db->execute();
+      $i++;
+    }
+    
+    // set the new item order
+    $this->row->set('ordering', $to);
+    
+    return true;
+  }
+  
+  public function reorder($where='')
+  {
+    $this->orderingAble(false);
+    
+    $k = $this->tbl_key;
+    
+    $query = $this->db->getQuery(true)
+      ->select($k.', ordering')
+      ->from($this->tbl)
+      ->where('ordering >= 0')
+      ->order('ordering');
+    
+    if ( $where ){
+      $query->where($where);
+    }
+    
+    $this->db->setQuery($query);
+    $rows = $this->db->loadObjectList();
+    // debugMe($rows);
+    
+    $current = 1;
+    foreach($rows as &$row){
+      $row->ordering = (int)$row->ordering;
+      
+      if ( $row->ordering <> $current ){
+        $row->ordering = $current;
+        
+        $this->db->setQuery(
+          $this->db->getQuery(true)
+            ->update($this->tbl)
+            ->set('ordering='.$current)
+            ->where($k.'='.$row->{$k})
+        );
+        $this->db->execute();
+      }
+      
+      $current++;
+    }
+    // debugMe($rows)->end();
+    
+    return true;
+  }
+  
+  public function orderingAble($return=true)
+  {
+    $able = $this->hasField('ordering');
+    
+    if ( $return === false && !$able ){
+      throw new TableException('Table doesn\'t support ordering ['.$this->tbl.']');
+    }
+    
+    return $able;
+  }
 }

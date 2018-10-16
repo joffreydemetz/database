@@ -22,15 +22,14 @@ abstract class DatabaseHelper
    * @var   array
    */
   protected static $translations = [
-    'UNKNOWN_ERROR' => 'Erreur de type inconnu',
-    
-    'ERROR_DELETED_SO_CANNOT_PUBLISH' => 'L\'élément ne peut être publié car il a été mis dans la corbeille',
-    'ERROR_EMPTY_ROW' => 'La ligne de la base de données est vide',
-    'ERROR_ITEM_ALREADY_DELETED' => 'La ligne a déjà été mise à la corbeille',
-    'ERROR_RECORD_UNCHANGED' => 'La ligne n\'a pas subit de modification',
-    'ERROR_SLUG_EXISTS' => 'Cet alias est déjà utilisé',
-    'ERROR_TITLE_EXISTS' => 'Ce titre est déjà utilisé',
-    'NO_ITEM_SELECTED' => 'Aucun élément sélectionné',
+    'UNKNOWN_ERROR'             => 'Erreur de type inconnu',
+    'DELETED_SO_CANNOT_PUBLISH' => 'L\'élément ne peut être publié car il a été mis dans la corbeille',
+    'EMPTY_ROW'                 => 'La ligne de la base de données est vide',
+    'ITEM_ALREADY_DELETED'      => 'La ligne a déjà été mise à la corbeille',
+    'RECORD_UNCHANGED'          => 'La ligne n\'a pas subit de modification',
+    'SLUG_EXISTS'               => 'Cet alias est déjà utilisé',
+    'TITLE_EXISTS'              => 'Ce titre est déjà utilisé',
+    'NO_ITEM_SELECTED'          => 'Aucun élément sélectionné',
   ];
   
   /**

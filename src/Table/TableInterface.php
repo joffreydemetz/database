@@ -17,197 +17,200 @@ use JDZ\Database\DatabaseInterface;
 interface TableInterface
 {
   /**
+   * Set the database instance
+   *
+   * @param  DatabaseInterface  $db  
+   * @return $this
+   */
+  public function setDb(DatabaseInterface $db);
+  
+  /**
+   * Set the Table name
+   *
+   * @param  string  $tbl_name  
+   * @return $this
+   */
+  public function setTblName(string $tbl_name);
+  
+  /**
+   * Set the Table primary key
+   *
+   * @param  string  $tbl_key  
+   * @return $this
+   */
+  public function setTblKey(string $tbl_key);
+  
+  /**
+   * Set the object properties based on a named array/hash.
+   *
+   * @param  mixed  $properties  Either an associative array or another object.
+   * @return $this
+   */
+  public function setProperties($properties);
+  
+  /**
    * Return the database object
    * 
-   * @return  DatabaseInterface   The database instance
+   * @return DatabaseInterface   The database instance
    */
   public function getDb();
   
   /**
    * Return the table short name
    * 
-   * @return  string   The table short name
+   * @return string   The table short name
    */
   public function getTblName();
   
   /**
    * Return the table name
    * 
-   * @return  string   The table name
+   * @return string   The table name
    */
   public function getTbl();
   
   /**
-   * Return the table promary key
+   * Return the table primary key
    * 
-   * @return  string   The primary key
+   * @return string   The primary key
    */
   public function getTblKey();
   
   /**
-   * Set the object properties based on a named array/hash.
-   *
-   * @param   mixed  $properties  Either an associative array or another object.
-   * @return   boolean
-   */
-  public function setProperties($properties);
-  
-  /**
-   * Returns an associative array of object properties
-   *
-   * @return  array
-   */
-  public function getProperties();
-  
-  /**
-   * Sets a property of the object
+   * Return the current table row data
    * 
-   * @param   string  $field  The name of the property
-   * @param   mixed   $value  The value of the property to set
-   * @return  void
+   * @return TableRow
    */
-  public function set($field, $value=null);
+  public function getRow();
   
   /**
-   * Returns a property of the object or the default value if the property is not set
-   * 
-   * @param   string  $field     The name of the property
-   * @param   mixed   $default   The default value
-   * @return  mixed   The value of the property
-   */
-  public function get($field, $default=null);
-
-  /**
-   * Add an error message
+   * Returns an associative array of the table row properties
    *
-   * @param   mixed  $error  Error message or exception instance
-   * @return  void
+   * @param  bool  $object  True to return data a stdClass object
+   * @return array
    */
-  public function setError($error);
+  public function getProperties($object=false);
   
-  /**
-   * Return all errors, if any.
+  /** 
+   * Check for more recent versions 
    * 
-   * @return   array  Array of error messages or Exception instances.
+   * @return int  The previous version record ID (in table::version)
    */
-  public function getErrors();
+  public function getPreviousVersion();
   
-  /**
-   * Get an error message
-   *
-   * @param   int      $i         Option error index
-   * @param   boolean  $toString  Indicates if Exception instances should return the error message or the exception object
-   * @return  string   Error message
-   */
-  public function getError($i=null, $toString=true);
-  
-  /**
-   * Return all errors, if any, as a unique string.
+  /** 
+   * Load category siblings
    * 
-   * @param   string   $separator     The separator.
-   * @return   string   String containing all the errors separated by the specified sequence.
+   * @param  int     $id_category   The category ID
+   * @return array   List of sibling IDs
    */
-  public function getErrorsAsString($glue='<br />');
+  public function getByCategory($id_category);
+  
+  /** 
+   * Check if table includes specified field(s)
+   * 
+   * @param  array|string  $fields  An array or a string with the field name
+   * @return bool  True if the field is found
+   */
+  public function hasField($fields);
+  
+  /** 
+   * Check if table row has children
+   * 
+   * @param  int     $pk     The parent row ID
+   * @param  string  $field  The parent id field name
+   * @return bool  True if the field is found
+   */
+  public function hasChildren($pk=null, $field='parent_id');
+  
+  /** 
+   * Count row children
+   * 
+   * @param  int     $pk     The parent row ID
+   * @param  string  $field  The parent id field name
+   * @return bool  True if the field is found
+   */
+  public function countChildren($pk=null, $field='parent_id');
   
   /**
    * Has the current record been modified
    * 
-   * @return  bool  True if modified
+   * @return bool  True if modified
    */
   public function recordWasModified();
   
   /** 
    * Disable the row for checkbox selection
    * 
-   * @param   int    $id  The item id
-   * @return  bool   True if row should be disabled
+   * @param  int    $id  The item id
+   * @return bool   True if row should be disabled
    */
   public function rowIsDisabled($id);
   
-  
-  /**
-   * Save associations
+  /** 
+   * Get the list of trashed items meeting specified conditions
    * 
-   * @return  string  $right_tbl   Right associated table short name
-   * @return  int     $pk          Left association table record ID
-   * @return  array   $right_items Right association table record IDs
-   * @return  bool    $clear       True to clear previous records
-   * @return  bool    $order       True if the associated elements should be ordered
-   * @return  bool    True if successfull
+   * @param  array    $conditions     The filter conditions
+   * @return bool     True on success.
    */
-  public function saveAssociations($right, $pk, array $right_items, $clear=true, $order=false);
+  public function trashedItems(array $conditions=[]);
+  
+  public function isDuplicate(array $properties, $id=0);
+  
+  public function init();
   
   /** 
    * Reset the current table object properties to their default value (null)
    * 
-   * @return   void
+   * @return void
    */
   public function reset();
   
   /** 
    * Load an item by slug name
    * 
-   * @param   array|int   $keys    The item id or an array of conditions
-   * @return   bool        $reset   True to reset the table object before loading the new item.
-   * @return   bool        $clean   True to clean fields by type
-   * @return   bool        True if item was loaded successfully.
+   * @param  array|int   $keys    The item id or an array of conditions
+   * @return bool        $reset   True to reset the table object before loading the new item.
+   * @return bool        $clean   True to clean fields by type
+   * @return bool        True if item was loaded successfully.
    */
   public function load($keys=null, $reset=true, $clean=true);
   
   /** 
    * Load an item by slug name
    * 
-   * @param   string  $slug   The item slug
-   * @return   bool    True if found.
+   * @param  string  $slug   The item slug
+   * @return bool    True if found.
    * @see     load()
    */
   public function loadBySlug($slug);
   
   /** 
-   * Load category siblings
-   * 
-   * @param   int     $id_category   The category ID
-   * @return   array   List of sibling IDs
-   */
-  public function getByCategory($id_category);
-  
-  /** 
    * Save/update the record.
    * 
-   * @param   array     $src        Key/Value pairs
-   * @param   array     $ignore     Key/Value pairs of properties to ignore
-   * @return   bool      True if successfully saved or no modifications were found.
+   * @param  array     $src        Key/Value pairs
+   * @param  array     $ignore     Key/Value pairs of properties to ignore
+   * @return bool      True if successfully saved or no modifications were found.
    */
   public function save(array $src, array $ignore);
-  
-  /** 
-   * Bind data to the table object.
-   * 
-   * @param   array     $src        Key/Value pairs
-   * @param   array     $ignore     Key/Value pairs of properties to ignore
-   * @param   array     $oldValues  Key/Value pairs of old property values 
-   *                                used to check if record was really modified.
-   * @return   bool      True if binding ws successfull.
-   */
-  public function bind(array $src, array $ignore=[], array &$oldValues=[]);
   
   /** 
    * Delete a record
    * 
    * If the table is statesAble, the record will not be removed from database.
    * 
-   * @param   int|null    $pk     The record PrimaryKey value 
+   * @param  int|null    $pk     The record PrimaryKey value 
    *                              current loaded id will be used if not set.
-   * @return   bool        True on success.
+   * @return bool        True on success.
    */
   public function delete($pk=null);
   
   /** 
    * Untrash a record
    * 
-   * @param   int|null    $pk     The record PrimaryKey value 
+   * @param  int|null    $pk     The record PrimaryKey value 
    *                              current loaded id will be used if not set.
-   * @return   bool        True on success.
+   * @return bool        True on success.
    */
   public function untrash($pk=null);
   
@@ -216,77 +219,29 @@ interface TableInterface
    * 
    * When a statesAble table record should be remove from database.
    * 
-   * @param   int|null    $pk     The record PrimaryKey value current loaded id will be used if not set
-   * @return   bool        True on success.
+   * @param  int|null    $pk     The record PrimaryKey value current loaded id will be used if not set
+   * @return bool        True on success.
    */
   public function shred($pk=null);
   
   /** 
    * Return to previous version
    * 
-   * @param   int     $pk             The record PrimaryKey value
-   * @param   array   $data           The previous version data
-   * @return   bool    True on success
+   * @param  int     $pk             The record PrimaryKey value
+   * @param  array   $data           The previous version data
+   * @return bool    True on success
    */
   public function revert($pk, array $data);
   
   /** 
    * Publish/unpublish a record
    * 
-   * @param   int|null    $pk     The record PrimaryKey value current loaded id will be used if not set
-   * @param   int         $state  0 to unpublish, 1 to publish
-   * @return   bool        True on success.
+   * @param  int|null    $pk     The record PrimaryKey value current loaded id will be used if not set
+   * @param  int         $state  0 to unpublish, 1 to publish
+   * @return bool        True on success.
    */
   public function publish($pk=null, $state=1);
   
-  /** 
-   * Change ordering value of a record
-   * 
-   * @param   int|null    $pk        The record PrimaryKey value current loaded id will be used if not set 
-   * @param   int         $to        The ordering value to set
-   * @param   int         $minOrder  Min order value (to reorder only displayed records)
-   * @param   int         $maxOrder  Max order value (to reorder only displayed records)
-   * @return   bool       True on success
-   */
-  public function changeorder($pk, $to, $minOrder=0, $maxOrder=0);
-  
-  /** 
-   * Record records meeting specified conditions
-   * 
-   * @param   array|string    $where     A valid query where clause
-   * @return   bool            True on success.
-   */
-  public function reorder($where='');
-  
-  /** 
-   * Get the list of trashed items meeting specified conditions
-   * 
-   * @param   array    $conditions     The filter conditions
-   * @return   bool     True on success.
-   */
-  public function trashedItems(array $conditions=[]);
-  
-  /** 
-   * Get the next ordering value
-   * 
-   * @param  array|string    $where     A valid query where clause
-   * @return int             The next table ordering value.
-   */
-  public function getNextOrder($where = '');
-  
-  /** 
-   * Reorder conditions
-   * 
-   * @return array    $conditions     The filter conditions
-   */
-  public function getReorderConditions();
-  
-  /** 
-   * Check for more recent versions 
-   * 
-   * @return int  The previous version record ID (in table::version)
-   */
-  public function getPreviousVersion();
   
   /** 
    * Check if a title is unique according to specified conditions.
@@ -308,13 +263,6 @@ interface TableInterface
    */
   public function checkSlugUnique($id, $slug, array $conditions=[]);
   
-  /** 
-   * Check if table includes specified field(s)
-   * 
-   * @param   array|string  An array or a string with the field name
-   * @return   bool         True if the field is found
-   */
-  public function hasField($fields);
   
   /** 
    * Does table include a title and a slug 
@@ -337,36 +285,144 @@ interface TableInterface
   /** 
    * Does table support dates & user states
    * 
-   * @param   bool  $return   False to throw an exception if the functionnality
+   * @param  bool  $return   False to throw an exception if the functionnality
    *                          is not available for the current table object.
-   * @return   bool  True if the functionnality is supported.
+   * @return bool  True if the functionnality is supported.
    */
   public function statesAble($return=true);
   
   /** 
    * Does table support publishing
    * 
-   * @param   bool  $return   False to throw an exception if the functionnality
+   * @param  bool  $return   False to throw an exception if the functionnality
    *                          is not available for the current table object.
-   * @return   bool  True if the functionnality is supported.
+   * @return bool  True if the functionnality is supported.
    */
   public function publishingAble($return=true);
   
   /** 
-   * Does table support ordering
-   * 
-   * @param   bool  $return   False to throw an exception if the functionnality 
-   *                          is not available for the current table object.
-   * @return   bool  True if the functionnality is supported.
-   */
-  public function orderingAble($return=true);
-  
-  /** 
    * Does table use version
    * 
-   * @param   bool  $return   False to throw an exception if the functionnality 
+   * @param  bool  $return   False to throw an exception if the functionnality 
    *                          is not available for the current table object.
-   * @return   bool  True if the functionnality is supported.
+   * @return bool  True if the functionnality is supported.
    */
   public function versionAble($return=true);
+  
+  /*==========
+   ASSOCIATION UTILITIES
+   ===========*/
+  
+  /**
+   * Get associations
+   * 
+   * @return int            $pk        Left association table record ID
+   * @return array          $assocTbl  Associated table short name
+   * @return callable|null  $callback  True to clear previous records
+   * @return bool           $ordered   True if the associated elements are ordered
+   * @return array Associations
+   */
+  public function getAssociations($pk, $assocTbl, $callback=null, $ordered=true);
+  
+  /**
+   * Save associations
+   * 
+   * @return string  $right_tbl   Right associated table short name
+   * @return int     $pk          Left association table record ID
+   * @return array   $right_items Right association table record IDs
+   * @return bool    $clear       True to clear previous records
+   * @return bool    $ordered     True if the associated elements should be ordered
+   * @return bool    True if successfull
+   */
+  public function saveAssociations($right, $pk, array $right_items, $clear=true, $ordered=false);
+  
+  /*==========
+   ERROR UTILITIES
+   ===========*/
+  
+  /**
+   * Add an error message
+   *
+   * @param  mixed  $error  Error message or exception instance
+   * @return $this
+   */
+  public function setError($error);
+  
+  /**
+   * Clear errors
+   * 
+   * @return $this
+   */
+  public function clearErrors();
+  
+  /**
+   * Return all errors
+   * 
+   * @return array  Array of error messages
+   */
+  public function getErrors();
+  
+  /**
+   * Get an error message
+   *
+   * @param  int      $i         Option error index
+   * @param  boolean  $toString  Indicates if Exception instances should return the error message or the exception object
+   * @return string   Error message
+   */
+  public function getError($i=null, $toString=true);
+  
+  /**
+   * Return all errors, if any, as a unique string.
+   * 
+   * @param  string   $separator     The separator.
+   * @return string   String containing all the errors separated by the specified sequence.
+   */
+  public function getErrorsAsString($glue='<br />');
+  
+  /*==========
+   ORDERING UTILITIES
+   ===========*/
+  
+  /** 
+   * Get the next ordering value
+   * 
+   * @param  array|string    $where     A valid query where clause
+   * @return int             The next table ordering value.
+   */
+  public function getNextOrder($where='');
+  
+  /** 
+   * Reorder conditions
+   * 
+   * @return array    $conditions     The filter conditions
+   */
+  public function getReorderConditions();
+  
+  /** 
+   * Change ordering value of a record
+   * 
+   * @param  int|null    $pk        The record PrimaryKey value current loaded id will be used if not set 
+   * @param  int         $to        The ordering value to set
+   * @param  int         $minOrder  Min order value (to reorder only displayed records)
+   * @param  int         $maxOrder  Max order value (to reorder only displayed records)
+   * @return bool       True on success
+   */
+  public function changeorder($pk, $to, $minOrder=0, $maxOrder=0);
+  
+  /** 
+   * Record records meeting specified conditions
+   * 
+   * @param  array|string    $where     A valid query where clause
+   * @return bool            True on success.
+   */
+  public function reorder($where='');
+  
+  /** 
+   * Does table support ordering
+   * 
+   * @param  bool  $return   False to throw an exception if the functionnality 
+   *                          is not available for the current table object.
+   * @return bool  True if the functionnality is supported.
+   */
+  public function orderingAble($return=true);
 }

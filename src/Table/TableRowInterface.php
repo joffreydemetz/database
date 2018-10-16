@@ -15,55 +15,52 @@ namespace JDZ\Database\Table;
 interface TableRowInterface
 {
   /**
-   * Set the object properties
+   * Set the record properties
    * 
-   * @param   mixed  $properties  Either an associative array or another object
-   * @return  void
+   * @param  mixed  $properties  Either an associative array or an object
+   * @return void
    */
   public function setProperties($properties);
   
   /**
-   * Returns an associative array of object properties
+   * Returns the record data as an associative array or object
    *
-   * @param   bool  $object  True to return a stdClass
-   * @return  array|stdClass
+   * @param  bool  $object  True to return a stdClass
+   * @return array|stdClass
    */
-  public function getProperties($object=true);
+  public function all($object=true);
   
   /**
-   * Modifies a property of the object, creating it if it does not already exist
+   * Modifies a property of the record
    *
-   * @param   string  $key    The name of the property
-   * @param   mixed   $value  The value of the property to set
-   * @return  void
+   * @param  string  $key    The name of the property
+   * @param  mixed   $value  The value of the property to set
+   * @return void
    */
   public function set($key, $value=null);
   
   /**
-   * Returns a property of the object or the default value if the property is not set
+   * Returns a property of the record or the default value if the property is not set
    * 
-   * @param   string  $key  The name of the property
-   * @param   mixed   $default   The default value
-   * @return  mixed   The value of the property
+   * @param  string  $key  The name of the property
+   * @param  mixed   $default   The default value
+   * @return mixed   The value of the property
    */
   public function get($key, $default=null);
   
   /**
-   * Is the property set in the object
+   * Is the property set in the record
    * 
-   * @param   string  $key  The name of the property
-   * @return  bool    True if the property exists
+   * @param  string  $key  The name of the property
+   * @return bool    True if the property exists
    */
-  public function has($key)
-  {
-    return property_exists($this, $key);
-  }
+  public function has($key);
   
   /** 
    * Check if the record has been modified
    * 
-   * @param   TableRow  $old  Another table row object to compare
-   * @return  bool      True for a new record or if no modifications were found
+   * @param  TableRow  $oldRow  Old row data
+   * @return array     Associative array with the modifed fields
    */
-  public function diff(TableRow $old);
+  public function diff(TableRow $oldRow);
 }
