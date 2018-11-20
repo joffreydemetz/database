@@ -88,20 +88,12 @@ class MysqliDatabase extends Database
     }
 
     // If auto-select is enabled select the given database.
-    if ( $this->options['select'] && $this->database ){
+    if ( $this->database ){
       $this->select($this->database);
     }
     
     // Set charactersets (needed for MySQL 4.1.2+).
     $this->utf = $this->setUtf();
-
-    // Set sql_mode to non_strict mode
-    // mysqli_query($this->connection, "SET @@SESSION.sql_mode = '';");
-    
-    // If auto-select is enabled select the given database.
-    // if ( $options['select'] && !empty($options['database']) ){
-      // $this->select($options['database']);
-    // }
   }
 
   /**

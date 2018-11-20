@@ -184,8 +184,7 @@ abstract class Database implements DatabaseInterface
    * Return a Database instance based on the given options. There are three global options and then
    * the rest are specific to the database driver. The 'driver' option defines which Connector class is
    * used for the connection -- the default is 'mysqli'. The 'database' option determines which database is to
-   * be used for the connection. The 'select' option determines whether the connector should automatically select
-   * the chosen database.
+   * be used for the connection.
    *
    * Instances are unique by name.
    * 
@@ -201,7 +200,6 @@ abstract class Database implements DatabaseInterface
     
     $options['driver']   = preg_replace('/[^A-Z0-9_\.-]/i', '', $options['driver']);
     $options['database'] = isset($options['database']) ? $options['database'] : null;
-    $options['select']   = isset($options['select']) ? $options['select'] : true;
     
     if ( empty(self::$instances[$name]) ){
       $Class = __NAMESPACE__ . '\\Connector\\'.ucfirst($options['driver']).'\\'.ucfirst($options['driver']).'Database';
