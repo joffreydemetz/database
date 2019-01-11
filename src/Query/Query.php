@@ -7,6 +7,7 @@
  */
 namespace JDZ\Database\Query;
 
+use JDZ\Database\DatabaseHelper;
 use JDZ\Database\DatabaseInterface;
 
 /**
@@ -295,23 +296,23 @@ abstract class Query implements QueryInterface
     }
   }
 
- /**
+  /**
    * Provide deep copy support to nested objects and arrays when cloning.
    *
    * @return   void
    */
-  public function __clone()
+  /* public function __clone()
   {
     foreach($this as $k => $v){
       if ( $k === 'db' ){
         continue;
       }
-
+      
       if ( is_object($v) || is_array($v) ){
         $this->$k = unserialize(serialize($v));
       }
     }
-  }
+  } */
   
   /**
    * Creates a formatted dump of the query for debugging purposes

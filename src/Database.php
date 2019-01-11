@@ -272,6 +272,11 @@ abstract class Database implements DatabaseInterface
     }
   }
   
+  public function getTblPrefix()
+  {
+    return $this->tablePrefix;
+  }
+  
   public function setQueriesLogger($logger)
   {
     $this->loggers['queries'] = $logger;

@@ -81,14 +81,15 @@ class TableRow implements TableRowInterface
   
   public function diff(TableRow $oldRow)
   {
-    if ( intval($this->get('id')) === 0 || intval($oldRow->get('id')) === 0 ){
-      return true;
-    }
-    
     $props = [];
     
+    // if ( intval($this->get('id')) === 0 || intval($oldRow->get('id')) === 0 ){
+      // debugMe('FUCK');
+      // return $props;
+    // }
+    
     foreach(array_keys(get_object_vars($this)) as $field){
-      if ( $this->get($field) === $oldRow->get($field) ){
+      if ( $this->get($field) == $oldRow->get($field) ){
         continue;
       }
       
@@ -101,6 +102,7 @@ class TableRow implements TableRowInterface
       $props[$field] = $this->get($field);
     }
     
+    // debugMe($props);
     return $props;
   }
   
