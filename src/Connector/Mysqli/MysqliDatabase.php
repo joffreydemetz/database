@@ -19,37 +19,16 @@ use JDZ\Database\Exception\QueryException;
  */
 class MysqliDatabase extends Database
 {
-  /**
-   * {@inheritDoc}
-   */
   public $name = 'mysqli';
-
-  /**
-   * {@inheritDoc}
-   */
   protected $nameQuote = '`';
-
-  /**
-   * {@inheritDoc}
-   */
-  protected $nullDate = '0000-00-00 00:00:00';
-
-  /**
-   * {@inheritDoc}
-   */
-  protected static $dbMinimum = '5.0.4';
+  protected $nullDate = '1000-01-01 00:00:00';
+  protected static $dbMinimum = '5.7.1';
   
-  /**
-   * {@inheritDoc}
-   */
   public static function isSupported()
   {
     return ( function_exists('mysqli_connect') );
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function __construct(array $options=[])
   {
     $options['host']      = isset($options['host'])      ? $options['host']           : 'localhost';
@@ -64,9 +43,6 @@ class MysqliDatabase extends Database
     parent::__construct($options);
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function connect()
   {
     if ( $this->connection ){
@@ -96,9 +72,6 @@ class MysqliDatabase extends Database
     $this->utf = $this->setUtf();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function connected()
   {
     if ( is_object($this->connection) ){
@@ -109,9 +82,6 @@ class MysqliDatabase extends Database
     return false;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function disconnect()
   {
     // Close the connection.
@@ -122,9 +92,6 @@ class MysqliDatabase extends Database
     $this->connection = null;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function getQuery($new=false)
   {
     if ( $new ){
@@ -134,15 +101,22 @@ class MysqliDatabase extends Database
     return $this->sql;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function execute()
   {
     $sql = DatabaseHelper::replacePrefix((string) $this->sql, $this->tablePrefix, '#__');
     
     if ( $this->limit > 0 || $this->offset > 0 ){
       $sql .= ' LIMIT '.$this->offset.', '.$this->limit;
+    }
+    
+    if ( true === $this->profiling ){
+      $dbt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 3);
+      $f = isset($dbt[2]['function']) ? $dbt[2]['function'] : 'F';
+      $c = isset($dbt[2]['class']) ? $dbt[2]['class'] : 'C';
+      
+      if ( preg_match("/^SELECT .+/", $sql) ){
+        debugQuery(preg_replace("/\s+/", " ", $sql), $f.'::'.$c);
+      }
     }
     
     if ( $this->logall === true ){
@@ -166,9 +140,6 @@ class MysqliDatabase extends Database
     return $this->cursor;
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function select($database)
   {
     if ( !$database ){
@@ -335,8 +306,6 @@ class MysqliDatabase extends Database
       $row['infos'] = $this->loadAssocList();
     }
     
-    // debugMe($rows)->end();
-    
     if ( !$rows ){
       return false;
     }
@@ -344,87 +313,57 @@ class MysqliDatabase extends Database
     return $rows;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function truncateTable($table)
   {
     $this->setQuery('TRUNCATE TABLE '.$this->quoteName($table));
     $this->execute();
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function lockTable($table)
   {
     $this->setQuery('LOCK TABLES ' . $this->qn($table) . ' WRITE');
     $this>execute();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function unlockTables()
   {
     $this->setQuery('UNLOCK TABLES');
     $this->execute();
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function transactionCommit()
   {
     $this->setQuery('COMMIT');
     $this->execute();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function transactionRollback()
   {
     $this->setQuery('ROLLBACK');
     $this->execute();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   public function transactionStart()
   {
     $this->setQuery('START TRANSACTION');
     $this->execute();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   protected function fetchArray($cursor=null)
   {
     return mysqli_fetch_row($cursor ?: $this->cursor);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   protected function fetchAssoc($cursor=null)
   {
     return mysqli_fetch_assoc($cursor ?: $this->cursor);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   protected function fetchObject($cursor=null, $class='\\stdClass')
   {
     return mysqli_fetch_object($cursor ?: $this->cursor, $class);
   }
 
-  /**
-   * {@inheritDoc}
-   */
   protected function freeResult($cursor=null)
   {
     mysqli_free_result($cursor ?: $this->cursor);

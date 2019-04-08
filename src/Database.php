@@ -32,13 +32,6 @@ abstract class Database implements DatabaseInterface
    * @var   array
    */
   protected $options;
-  
-  /**
-   * The log path
-   * 
-   * @var    string  
-   */
-  // protected $logpath;
 
   /**
    * True to log all queries (DEV mode)
@@ -458,7 +451,6 @@ abstract class Database implements DatabaseInterface
     }
     
     $this->setQuery(sprintf($statement, implode(', ', $fields), $where));
-    // debugMe((string)$this->getQuery())->end();
     
     return $this->execute();
   }

@@ -116,13 +116,7 @@ abstract class Table implements TableInterface
   
   public function __clone()
   {
-    $this->errors          = [];
-    $this->hasBeenModified = false;
-    $this->row             = TableRow::create();
-    
-    foreach($this->getFieldNames() as $field){
-      $this->row->set($field, null);
-    }
+    $this->reset();
   }
   
   public function setDb(DatabaseInterface $db)
@@ -308,29 +302,32 @@ abstract class Table implements TableInterface
     return $id;
   }
   
-  
   public function init()
   {
     $this->timestamp = Date::getInstance();
     
     $this->tbl = '#__'.$this->tbl_name;
     
-    $this->row = TableRow::create();
-    
-    foreach($this->getFieldNames() as $field){
-      $this->row->set($field, null);
-    }
+    $this->reset();
     
     return $this;
   }
   
   public function reset()
   {
-    $this->row->set($this->tbl_key, 0);
+    $this->hasBeenModified = false;
+    $this->errors = [];
+    $this->row = TableRow::create();
     
-    foreach($this->getFields() as $fieldName => $fieldInfos){
-      if ( $fieldName != $this->tbl_key ){
-        $this->row->set($fieldName, null); //$fieldInfos->Default);
+    if ( $this->tbl_key ){
+      $this->row->set($this->tbl_key, 0);
+    }
+    
+    foreach($this->getFields() as $field => $fieldInfos){
+    // foreach($this->getFieldNames() as $field){
+      if ( $field !== $this->tbl_key ){
+        $this->row->set($field, $fieldInfos->Default);
+        // $this->row->set($field, null); //$fieldInfos->Default);
       }
     }
   }
@@ -451,14 +448,12 @@ abstract class Table implements TableInterface
       }
     }
     
-    if ( $this->orderingAble() && intval($this->row->get('ordering')) === 0 ){
-      $conditions = $this->getReorderConditions();
-      $this->row->set('ordering', $this->getNextOrder($conditions));
+    if ( $this->orderingAble() ){
+      if ( $this->shouldBeOrdered() ){
+        $conditions = $this->getReorderConditions();
+        $this->row->set('ordering', $this->getNextOrder($conditions));
+      }
     }
-    
-    // if ( $this->publishingAble() ){
-      // $this->row->set('published', (int)$this->row->get('published')); 
-    // }
     
     if ( $this->statesAble() ){
       $userId   = $this->db->getUid();
@@ -468,27 +463,52 @@ abstract class Table implements TableInterface
       if ( !$this->row->get($this->tbl_key) ){
         $this->row->set('created', $nowDate);
         $this->row->set('created_by', $userId); 
-        
-        // $this->row->set('modified', $nullDate);
-        // $this->row->set('deleted',  $nullDate);
       }
       else {
         $this->row->set('modified', $nowDate);
         $this->row->set('modified_by', $userId); 
       }
-      
-      // if ( !$this->row->get('modified') ){
-        // $this->row->set('modified', $nullDate);
-      // }
-      
-      // if ( !$this->row->get('deleted') ){
-        // $this->row->set('deleted', $nullDate);
-      // }
     }
     
     if ( $this->versionAble() ){
       $version = (int)$this->row->get('version');
       $this->row->set('version', ++$version);
+    }
+    
+    foreach($this->getFields() as $fieldName => $fieldInfos){
+      $v = $this->row->get($fieldName);
+      
+      if ( 'YES' === $fieldInfos->Null ){
+        switch($fieldInfos->Type){
+          case 'bigint':
+          case 'mediumint':
+          case 'smallint':
+          case 'tinyint':
+            if ( 0 === $this->row->get($fieldName) ){
+              $this->row->set($fieldName, null);
+            }
+            break;
+          
+          case 'datetime':
+          case 'timestamp':
+            if ( $this->db->getNullDate(true) === $this->row->get($fieldName) ){
+              $this->row->set($fieldName, null);
+            }
+            break;
+          
+          case 'date':
+            if ( $this->db->getNullDate(false) === $this->row->get($fieldName) ){
+              $this->row->set($fieldName, null);
+            }
+            break;
+          
+          case 'time':
+            if ( '00:00:00' === $this->row->get($fieldName) ){
+              $this->row->set($fieldName, null);
+            }
+            break;
+        }
+      }
     }
     
     return true;
@@ -851,27 +871,24 @@ abstract class Table implements TableInterface
   /** 
    * Chec if the record has been modified.
    * 
-   * @param  array     $oldValues  Key/Value pairs of old property values 
-   * @return bool      True for a new record or if no modifications were found.
+   * @param  array  $oldValues  Key/Value pairs of old property values 
+   * @return bool   True for a new record or if no modifications were found.
    */
   protected function hasBeenModified(TableRow $oldRow)
   {
     $diff = $this->row->diff($oldRow);
-    // debugMe(count($diff));
     $this->hasBeenModified = ( count($diff) > 0 );
-    // debugMe('hasBeenModified '.$this->hasBeenModified);
     return $this->hasBeenModified; 
   }
   
   /** 
    * Get the object fields from database table columns
    * 
-   * @return array       The list of table properties
+   * @return array  The list of table properties
    */
   protected function getFields()
   {
     $fields = $this->db->getTableColumns($this->tbl);
-    
     if ( empty($fields) ){
       throw new TableException('Table columns not found');
     }
@@ -892,7 +909,7 @@ abstract class Table implements TableInterface
   /**
    * Set data type for known fields
    * 
-   * @return The typed value
+   * @return void
    */
   protected function setFieldsTypeByName()
   {
@@ -904,6 +921,7 @@ abstract class Table implements TableInterface
         case 'mediumint':
         case 'smallint':
         case 'tinyint':
+        case 'int':
           $this->row->set($fieldName, (int)$v); 
           break;
         
@@ -1130,7 +1148,7 @@ abstract class Table implements TableInterface
     
     return ($max + 1);
   }
-
+  
   public function getReorderConditions()
   {
     $conditions = [];
@@ -1144,6 +1162,11 @@ abstract class Table implements TableInterface
     }
     
     return $conditions;
+  }
+  
+  public function shouldBeOrdered()
+  {
+    return intval($this->row->get('ordering')) === 0;
   }
   
   public function changeorder($pk, $to, $minOrder=1, $maxOrder=0)
