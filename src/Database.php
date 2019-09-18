@@ -185,16 +185,16 @@ abstract class Database implements DatabaseInterface
    * @param  array     $options  Key/Value pairs
    * @return Database  A database object
    */
-  public static function getInstance($name, array $options=[])
+  public static function create($name, array $options=[])
   {
     if ( !isset(self::$instances) ){
       self::$instances = [];
     }
     
-    $options['driver']   = preg_replace('/[^A-Z0-9_\.-]/i', '', $options['driver']);
-    $options['database'] = isset($options['database']) ? $options['database'] : null;
-    
     if ( empty(self::$instances[$name]) ){
+      $options['driver']   = preg_replace('/[^A-Z0-9_\.-]/i', '', $options['driver']);
+      $options['database'] = isset($options['database']) ? $options['database'] : null;
+      
       $Class = __NAMESPACE__ . '\\Connector\\'.ucfirst($options['driver']).'\\'.ucfirst($options['driver']).'Database';
       
       if ( !class_exists($Class) ){
@@ -205,6 +205,14 @@ abstract class Database implements DatabaseInterface
     }
     
     return self::$instances[$name];
+  }
+
+  /**
+   * @deprecated use create()
+   */
+  public static function getInstance($name, array $options=[])
+  {
+    return static::create($name, $options);
   }
 
   /**
@@ -332,11 +340,17 @@ abstract class Database implements DatabaseInterface
   
   public function getNullDate($dateTime=true)
   {
-    if ( $dateTime ){
-      return $this->nullDate;
-    }
-    
-    return substr($this->nullDate, 0, 10);
+    return true === $dateTime ? $this->getNullDatetime() : substr($this->nullDate, 0, 10);
+  }
+  
+  public function getNullDatetime()
+  {
+    return $this->nullDate;
+  }
+  
+  public function isNullDate(string $testDate)
+  {
+    return '' === $testDate || substr($this->nullDate, 0, 10) === substr($testDate, 0, 10);
   }
   
   public function getUid()
@@ -352,6 +366,11 @@ abstract class Database implements DatabaseInterface
   public function getDbMinimum()
   {
     return static::$dbMinimum;
+  }
+  
+  public function isMinimumVersion()
+  {
+    return version_compare($this->getVersion(), static::$dbMinimum) >= 0;
   }
   
   /**
@@ -652,7 +671,16 @@ abstract class Database implements DatabaseInterface
     
     return '\''.($escape ? $this->escape($text) : $text).'\'';
   }
-
+  
+  public function valuesToString(array $values)
+  {
+    $in=[];
+    foreach($values as $value){
+      $in[] = $this->quote($value);
+    }
+    return implode(', ', $in);
+  }
+  
   public function quoteName($name, $as=null)
   {
     if ( is_string($name) ){
@@ -681,11 +709,6 @@ abstract class Database implements DatabaseInterface
     }
 
     return $fin;
-  }
-  
-  public function isMinimumVersion()
-  {
-    return version_compare($this->getVersion(), static::$dbMinimum) >= 0;
   }
   
   protected function quoteNameStr($strArr)

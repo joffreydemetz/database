@@ -45,9 +45,15 @@ class TableRow implements TableRowInterface
   public function setProperties($properties)
   {
     if ( is_array($properties) || is_object($properties) ){
-      foreach((array)$properties as $k => $v){
-        $this->set($k, $v);
-      }
+      $this->sets((array)$rproperties);
+    }
+    return $this;
+  }
+  
+  public function sets(array $properties)
+  {
+    foreach((array)$properties as $k => $v){
+      $this->set($k, $v);
     }
     return $this;
   }

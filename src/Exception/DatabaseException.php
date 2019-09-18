@@ -7,13 +7,11 @@
  */
 namespace JDZ\Database\Exception;
 
-use RuntimeException;
-
 /**
  * Database exception
  * 
  * @author Joffrey Demetz <joffrey.demetz@gmail.com>
  */
-class DatabaseException extends RuntimeException 
+class DatabaseException extends \RuntimeException 
 {
 }

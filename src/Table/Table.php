@@ -84,36 +84,6 @@ abstract class Table implements TableInterface
    */ 
   protected $errors = [];
   
-  /* public static function create($name)
-  {
-    $Class = get_called_class();
-    return new $Class();
-  } */
-  
-  /**
-   * Magic method to get a row field value
-   *
-   * @param  string  $name  Field name
-   * @return mixed   The value or null if the property is not set
-   */
-  /* public function __get($name)
-  {
-    debugMe('Still using '.$this->tbl.'::__get for '.$name);
-    return $this->row->get($name);
-  } */
-  
-  /**
-   * Magic method to set a row field value
-   *
-   * @param  string  $name  Field name
-   * @return mixed   The value or null if the property is not set
-   */
-  /* public function __set($name, $value)
-  {
-    debugMe('Still using '.$this->tbl.'::__set for '.$name);
-    return $this->row->set($name, $value);
-  } */
-  
   public function __clone()
   {
     $this->reset();
@@ -304,7 +274,7 @@ abstract class Table implements TableInterface
   
   public function init()
   {
-    $this->timestamp = Date::getInstance();
+    $this->timestamp = Date::create();
     
     $this->tbl = '#__'.$this->tbl_name;
     
@@ -321,6 +291,7 @@ abstract class Table implements TableInterface
     
     if ( $this->tbl_key ){
       $this->row->set($this->tbl_key, 0);
+      // $this->row->set($this->tbl_key, null);
     }
     
     foreach($this->getFields() as $field => $fieldInfos){
@@ -353,6 +324,10 @@ abstract class Table implements TableInterface
     
     // $fields = array_keys($this->row->all());
     $fields = $this->getFieldNames();
+    
+    foreach($fields as &$field){
+      $field = $this->db->qn($field);
+    }
     
     $query = $this->db->getQuery(true)
       // ->select('*')
@@ -400,7 +375,7 @@ abstract class Table implements TableInterface
     
     $this->bind($src, $ignore);
     
-    if ( !$this->hasBeenModified($oldRow) ){
+    if ( $pk && !$this->hasBeenModified($oldRow) ){
       // $this->setError(DatabaseHelper::getTranslation('RECORD_UNCHANGED'));
       return true;
     }
@@ -415,6 +390,11 @@ abstract class Table implements TableInterface
     
     return true;
   }
+  
+  /* public function checkUnicity(int $id, string $field, ?string $group=null)
+  {
+    
+  } */
   
   protected function bind(array $src, array $ignore=[])
   {
@@ -438,16 +418,6 @@ abstract class Table implements TableInterface
    */
   protected function check()
   {
-    if ( $this->slugAble() ){
-      if ( !$this->checkTitleUnique($this->row->get('id'), $this->row->get('title')) ){
-        return false;
-      }
-      
-      if ( !$this->checkSlugUnique($this->row->get('id'), $this->row->get('slug')) ){
-        return false;
-      }
-    }
-    
     if ( $this->orderingAble() ){
       if ( $this->shouldBeOrdered() ){
         $conditions = $this->getReorderConditions();
@@ -458,7 +428,7 @@ abstract class Table implements TableInterface
     if ( $this->statesAble() ){
       $userId   = $this->db->getUid();
       $nullDate = $this->db->getNullDate();
-      $nowDate  = Date::getInstance()->format($this->db->getDateFormat());
+      $nowDate  = Date::create()->format($this->db->getDateFormat());
       
       if ( !$this->row->get($this->tbl_key) ){
         $this->row->set('created', $nowDate);
@@ -467,6 +437,16 @@ abstract class Table implements TableInterface
       else {
         $this->row->set('modified', $nowDate);
         $this->row->set('modified_by', $userId); 
+      }
+    }
+    
+    if ( $this->categorizeAble() ){
+      $id_category = (int)$this->row->get('id_category');
+      if ( 0 === $id_category ){
+        $this->row->set('id_category', null);
+      }
+      else {
+        $this->row->set('id_category', $id_category);
       }
     }
     
@@ -507,6 +487,12 @@ abstract class Table implements TableInterface
               $this->row->set($fieldName, null);
             }
             break;
+          
+          default:
+            if ( !$this->row->get($fieldName) ){
+              $this->row->set($fieldName, null);
+            }
+            break;
         }
       }
     }
@@ -514,6 +500,38 @@ abstract class Table implements TableInterface
     return true;
   }
   
+  protected function checkUnique(string $field, ?string $groupField=null)
+  {
+    $conditions = [];
+    $conditions[] = $field.' = '.$this->db->q( $this->row->get($field) );
+    
+    if ( $groupField ){
+      $conditions[] = $groupField.' = '.(int)$this->row->get($groupField);
+    }
+    
+    // updating
+    if ( 0 !== $this->row->get('id') ){
+      // id different from the current one
+      $conditions[] = 'id <> '.$this->row->get('id');
+    }
+    
+    $this->db->setQuery(
+      $this->db->getQuery(true)
+        ->select('id')
+        ->from($this->tbl)
+        ->where($conditions)
+    );
+    
+    $existingId = (int)$this->db->loadResult();
+    
+    if ( $existingId > 0 ){
+      $this->setError('La valeur "'.$this->row->get($field).'" existe déjà pour le champ "'.$field.'"');
+      return false;
+    }
+    
+    return true;
+  }
+    
   /** 
    * Store the record
    * 
@@ -526,6 +544,18 @@ abstract class Table implements TableInterface
     
     foreach($this->getFields() as $fieldName => $fieldInfos){
       $fieldValue = $this->row->get($fieldName);
+      
+      if ( $this->tbl_key === $fieldName ){
+        if ( 0 === intval($fieldValue) ){
+          $row->set($fieldName, null);
+          continue;
+        }
+      }
+      
+      if ( null === $fieldValue ){
+        $row->set($fieldName, null);
+        continue;
+      }
       
       switch($fieldInfos->Type){
         case 'bigint':
@@ -558,7 +588,7 @@ abstract class Table implements TableInterface
       $row->set($fieldName, $fieldValue);
     }
     
-    if ( $row->get($this->tbl_key) ){
+    if ( 'id' === $this->tbl_key && $row->get($this->tbl_key) ){
       $ret = $this->db->updateObject($this->tbl, $row, $this->tbl_key, $updateNulls);
     }
     else {
@@ -591,11 +621,11 @@ abstract class Table implements TableInterface
       }
       
       if ( $this->row->get('modified') && $this->row->get('modified') === $this->db->getNullDate() ){
-        $this->row->set('modified', Date::getInstance()->format($this->db->getDateFormat()));
+        $this->row->set('modified', Date::create()->format($this->db->getDateFormat()));
         $this->row->set('modified_by', $this->db->getUid());
       }
       
-      $this->row->set('deleted', Date::getInstance()->format($this->db->getDateFormat()));
+      $this->row->set('deleted', Date::create()->format($this->db->getDateFormat()));
       $this->row->set('deleted_by', $this->db->getUid());
       
       if ( $this->publishingAble() ){
@@ -723,7 +753,7 @@ abstract class Table implements TableInterface
     
     if ( $this->statesAble() ){
       $query
-        ->set('modified='.$this->db->q(Date::getInstance()->format($this->db->getDateFormat())))
+        ->set('modified='.$this->db->q(Date::create()->format($this->db->getDateFormat())))
         ->set('modified_by='.$this->db->q($this->db->getUid()));
     }
     
@@ -763,9 +793,6 @@ abstract class Table implements TableInterface
     return true;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function checkSlugUnique($id, $slug, array $conditions=[])
   {
     $this->slugAble();
@@ -793,9 +820,6 @@ abstract class Table implements TableInterface
     return true;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function slugAble($return=true)
   {  
     // $able = $this->hasField('slug') && $this->hasField('title') );
@@ -808,9 +832,17 @@ abstract class Table implements TableInterface
     return $able;
   }
   
-  /**
-   * {@inheritDoc}
-   */
+  public function parentizeAble($return=true)
+  {  
+    $able = $this->hasField('parent_id');
+    
+    if ( $return === false && !$able ){
+      throw new TableException('Table doesn\'t support parent_id ['.$this->tbl.']');
+    }
+    
+    return $able;
+  }
+  
   public function categorizeAble($return=true)
   {  
     $able = $this->hasField(['id_category']);
@@ -822,9 +854,6 @@ abstract class Table implements TableInterface
     return $able;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function statesAble($return=true)
   {  
     $able = $this->hasField('created');
@@ -842,9 +871,6 @@ abstract class Table implements TableInterface
     return $able;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function publishingAble($return=true)
   {
     $able = $this->hasField('published');
@@ -854,9 +880,6 @@ abstract class Table implements TableInterface
     return $able;
   }
   
-  /**
-   * {@inheritDoc}
-   */
   public function versionAble($return=true)
   {  
     $able = $this->hasField('version');
