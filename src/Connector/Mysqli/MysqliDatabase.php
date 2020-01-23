@@ -208,7 +208,7 @@ class MysqliDatabase extends Database
       $columns = [];
     }
     
-    $table = str_replace('#__', $this->getTablePrefix(), $table);
+    $table = str_replace('#__', $this->tablePrefix, $table);
     
     if ( !isset($columns[$table]) ){
       $columns[$table] = [];
@@ -226,7 +226,7 @@ class MysqliDatabase extends Database
   
   public function getTableKeys($table)
   {
-    $table = str_replace('#__', $this->getTablePrefix(), $table);
+    $table = str_replace('#__', $this->tablePrefix, $table);
     
     $this->setQuery('SHOW KEYS FROM '.$$table);
     $keys = $this->loadObjectList();
@@ -247,7 +247,7 @@ class MysqliDatabase extends Database
 
   public function tableExists($table)
   {
-    $table = str_replace('#__', $this->getTablePrefix(), $table);
+    $table = str_replace('#__', $this->tablePrefix, $table);
     
     $tables = $this->getTableList();
     return in_array($table, $tables);

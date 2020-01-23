@@ -428,7 +428,7 @@ abstract class Table implements TableInterface
     if ( $this->statesAble() ){
       $userId   = $this->db->getUid();
       $nullDate = $this->db->getNullDate();
-      $nowDate  = Date::create()->format($this->db->getDateFormat());
+      $nowDate  = Date::create()->format($this->db->dateFormat);
       
       if ( !$this->row->get($this->tbl_key) ){
         $this->row->set('created', $nowDate);
@@ -471,7 +471,7 @@ abstract class Table implements TableInterface
           
           case 'datetime':
           case 'timestamp':
-            if ( $this->db->getNullDate(true) === $this->row->get($fieldName) ){
+            if ( $this->db->getNullDate() === $this->row->get($fieldName) ){
               $this->row->set($fieldName, null);
             }
             break;
@@ -568,7 +568,7 @@ abstract class Table implements TableInterface
         case 'datetime':
         case 'timestamp':
           if ( !$fieldValue ){
-            $fieldValue = $this->db->getNullDate(true);
+            $fieldValue = $this->db->getNullDate();
           }
           break;
         
@@ -621,11 +621,11 @@ abstract class Table implements TableInterface
       }
       
       if ( $this->row->get('modified') && $this->row->get('modified') === $this->db->getNullDate() ){
-        $this->row->set('modified', Date::create()->format($this->db->getDateFormat()));
+        $this->row->set('modified', Date::create()->format($this->db->dateFormat));
         $this->row->set('modified_by', $this->db->getUid());
       }
       
-      $this->row->set('deleted', Date::create()->format($this->db->getDateFormat()));
+      $this->row->set('deleted', Date::create()->format($this->db->dateFormat));
       $this->row->set('deleted_by', $this->db->getUid());
       
       if ( $this->publishingAble() ){
@@ -753,7 +753,7 @@ abstract class Table implements TableInterface
     
     if ( $this->statesAble() ){
       $query
-        ->set('modified='.$this->db->q(Date::create()->format($this->db->getDateFormat())))
+        ->set('modified='.$this->db->q(Date::create()->format($this->db->dateFormat)))
         ->set('modified_by='.$this->db->q($this->db->getUid()));
     }
     
@@ -950,7 +950,7 @@ abstract class Table implements TableInterface
         
         case 'datetime':
         case 'timestamp':
-          if ( $v === $this->db->getNullDate(true) ){
+          if ( $v === $this->db->getNullDate() ){
             $this->row->set($fieldName, ''); 
           }
           break;

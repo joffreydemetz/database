@@ -321,7 +321,7 @@ abstract class Query implements QueryInterface
    */
   public function dump()
   {
-    return '<pre class="query">' . str_replace('#__', $this->db->getTablePrefix(), (string)$this) . '</pre>';
+    return '<pre class="query">' . str_replace('#__', $this->db->tablePrefix, (string)$this) . '</pre>';
   }
   
   /**
@@ -472,7 +472,7 @@ abstract class Query implements QueryInterface
    */
   public function dateFormat()
   {
-    return $this->db->getDateFormat();
+    return $this->db->dateFormat;
   }
 
   /**
