@@ -1,3 +1,5 @@
 # JDZ DBO
-Manage database connection
+
+Manage database connection 
+
 Generate a SQL query
