@@ -23,22 +23,15 @@ class MysqliStatement implements StatementInterface
 {
 	/**
 	 * Values which have been bound to the statement.
-	 *
-	 * @var    array
 	 */
-	protected $bindedValues;
+	protected array $bindedValues;
 
 	/**
 	 * Mapping between named parameters and position in query.
-	 *
-	 * @var    array
 	 */
-	protected $parameterKeyMapping;
+	protected array $parameterKeyMapping;
 
-	/**
-	 * @var    array
-	 */
-	protected $parameterTypeMapping = [
+	protected array $parameterTypeMapping = [
 		'bool'    => 'i',
 		'boolean' => 'i',
 		'int'     => 'i',
