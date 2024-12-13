@@ -23,7 +23,10 @@ class MysqliDatabase extends Database
   public string $nameQuote = '`';
   public bool $mariadb = false;
 
-  protected \mysqli $sqlConn;
+  /**
+   * @var    \mysqli|null
+   */
+  protected mixed $sqlConn;
 
   public function __construct(array $options)
   {

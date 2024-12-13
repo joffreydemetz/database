@@ -25,7 +25,10 @@ class PdoDatabase extends Database
 	public string $nullDate = '1000-01-01 00:00:00';
 	public string $nameQuote = '`';
 
-	protected \PDO $sqlConn;
+	/**
+	 * @var    \PDO|null
+	 */
+	protected mixed $sqlConn;
 
 	public function __construct(array $options)
 	{

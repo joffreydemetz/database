@@ -62,21 +62,6 @@ abstract class Database implements DatabaseInterface
     $this->disconnect();
   }
 
-  public function e(string $text, bool $extra = false): string
-  {
-    return $this->escape($text, $extra);
-  }
-
-  public function q(string $text, bool $escape = true): string
-  {
-    return $this->quote($text, $escape);
-  }
-
-  public function qn(string $name, ?string $as = null): string
-  {
-    return $this->quoteName($name, $as);
-  }
-
   public function disconnect()
   {
     $this->sqlConn = null;
