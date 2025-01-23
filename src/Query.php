@@ -316,7 +316,7 @@ class Query
   public function nullDate(bool $quoted = true): string
   {
     if (true === $quoted) {
-      $result = $this->db->q($this->db->getNullDate());
+      $result = $this->db->quote($this->db->getNullDate());
     }
     return $this->db->getNullDate();
   }
@@ -410,10 +410,10 @@ class Query
     return $this;
   }
 
-  public function insert(string $table)
+  public function insert(string $table, bool $ignore = false)
   {
     $this->type = 'insert';
-    $this->insert = new Element('INSERT INTO', $table);
+    $this->insert = new Element('INSERT' . (true === $ignore ? ' IGNORE' : '') . ' INTO', $table);
     return $this;
   }
 
@@ -510,10 +510,10 @@ class Query
     return $query;
   }
 
-  public function update(string $table)
+  public function update(string $table, bool $ignore = false)
   {
     $this->type = 'update';
-    $this->update = new Element('UPDATE', $table);
+    $this->update = new Element('UPDATE' . (true === $ignore ? ' IGNORE' : ''), $table);
 
     return $this;
   }
