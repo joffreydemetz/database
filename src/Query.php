@@ -22,8 +22,8 @@ class Query
 {
   public Database $db;
 
-  protected string $type = '';
-  protected string|null $alias = null;
+  protected ?string $type = null;
+  protected ?string $alias = null;
   protected ?Element $element = null;
 
   protected ?Element $select = null;
@@ -43,7 +43,7 @@ class Query
   protected ?Element $order = null;
   protected ?Element $union = null;
 
-  protected Query|string $sql = '';
+  protected Query|string|null $sql = null;
   protected int $limit = 0;
   protected int $offset = 0;
   protected array $bounded = [];
@@ -220,7 +220,7 @@ class Query
         break;
 
       case 'join':
-        $this->join = null;
+        $this->join = [];
         break;
 
       case 'set':
@@ -275,7 +275,7 @@ class Query
         $this->update  = null;
         $this->insert  = null;
         $this->from    = null;
-        $this->join    = null;
+        $this->join    = [];
         $this->set     = null;
         $this->where   = null;
         $this->group   = null;
@@ -582,6 +582,16 @@ class Query
     return $this;
   }
 
+  public function bindValue(string|int $key, mixed $value, string|int $dataType = 'string')
+  {
+    $bind = new Parameter($key, $value);
+    $bind->setDataType($dataType);
+
+    $this->bounded[$key] = $bind;
+
+    return $this;
+  }
+
   public function unbind(string|int $key)
   {
     if (\is_array($key)) {
@@ -598,7 +608,7 @@ class Query
   public function bindArray(array $data, string $dataType = 'string')
   {
     foreach ($data as $key => $value) {
-      $this->bindParam($key, $value, $dataType);
+      $this->bindValue($key, $value, $dataType);
     }
 
     return $this;

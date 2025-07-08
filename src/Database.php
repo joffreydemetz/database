@@ -248,6 +248,7 @@ abstract class Database implements DatabaseInterface
     if ($this->statement) {
       return $this->statement->fetch(FetchMode::MIXED);
     }
+    return null;
   }
 
   protected function fetchArray(): array|null|false
@@ -255,6 +256,7 @@ abstract class Database implements DatabaseInterface
     if ($this->statement) {
       return $this->statement->fetch(FetchMode::NUMERIC);
     }
+    return null;
   }
 
   protected function fetchAssoc(): array|null|false
@@ -262,6 +264,7 @@ abstract class Database implements DatabaseInterface
     if ($this->statement) {
       return $this->statement->fetch(FetchMode::ASSOCIATIVE);
     }
+    return null;
   }
 
   protected function fetchObject(): object|null|false
@@ -269,6 +272,7 @@ abstract class Database implements DatabaseInterface
     if ($this->statement) {
       return $this->statement->fetch();
     }
+    return null;
   }
 
   /******************************* 
