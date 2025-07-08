@@ -57,9 +57,14 @@ class PdoStatement implements StatementInterface
 			$extraParameters[0] = $extraParameters[0] ?? 0;
 		}
 
-		$this->pdoStatement->bindParam($parameter, $variable, $type, ...$extraParameters);
+		return $this->pdoStatement->bindParam($parameter, $variable, $type, ...$extraParameters);
+	}
 
-		return true;
+	public function bindValue(string|int $parameter, mixed $value, string $dataType = 'string'): bool
+	{
+		$type = $this->convertParameterType($dataType);
+
+		return $this->pdoStatement->bindValue($parameter, $value, $type);
 	}
 
 	public function closeCursor(): void
