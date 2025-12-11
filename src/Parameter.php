@@ -1,19 +1,12 @@
 <?php
 
 /**
- * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
- * 
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * @author    Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
 namespace JDZ\Database;
 
-/**
- * Query Parameter
- * 
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
- */
 class Parameter
 {
   const PARAM_BOOL = 'bool';

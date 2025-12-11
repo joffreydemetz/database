@@ -1,10 +1,8 @@
 <?php
 
 /**
- * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
- * 
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * @author    Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
 namespace JDZ\Database\Pdo;
@@ -12,11 +10,6 @@ namespace JDZ\Database\Pdo;
 use JDZ\Database\Connection;
 use JDZ\Database\Exception\DatabaseException;
 
-/**
- * Driver
- * 
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
- */
 class PdoConnection extends Connection
 {
   /**

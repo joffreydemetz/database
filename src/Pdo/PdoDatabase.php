@@ -1,10 +1,8 @@
 <?php
 
 /**
- * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
- * 
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * @author    Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
 namespace JDZ\Database\Pdo;
@@ -13,13 +11,7 @@ use JDZ\Database\Database;
 use JDZ\Database\Pdo\PdoStatement;
 use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Exception\PrepareStatementFailureException;
-// use JDZ\Database\Exception\ExecutionFailureException;
 
-/**
- * Database
- * 
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
- */
 class PdoDatabase extends Database
 {
 	public string $nullDate = '1000-01-01 00:00:00';
