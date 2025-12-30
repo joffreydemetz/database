@@ -35,7 +35,8 @@ class PdoConnection extends Connection
       $dsn .= ';unix_socket=' . $this->socket;
     }
 
-    if ($this->charset) {
+    // MySQL and SQLite support charset in DSN, PostgreSQL doesn't
+    if ($this->charset && in_array($this->driver, ['mysql', 'sqlite'], true)) {
       $dsn .= ';charset=' . $this->charset;
     }
 

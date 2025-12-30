@@ -7,35 +7,12 @@
 
 namespace JDZ\Database\Pdo;
 
-use JDZ\Database\FetchMode;
+use JDZ\Database\ParamType;
 use JDZ\Database\StatementInterface;
+use JDZ\Database\Exception\ExecutionFailureException;
 
 class PdoStatement implements StatementInterface
 {
-	/**
-	 * @var    array
-	 */
-	private const FETCH_MODE_MAP = [
-		FetchMode::ASSOCIATIVE     => \PDO::FETCH_ASSOC,
-		FetchMode::NUMERIC         => \PDO::FETCH_NUM,
-		FetchMode::MIXED           => \PDO::FETCH_BOTH,
-		FetchMode::STANDARD_OBJECT => \PDO::FETCH_OBJ,
-		FetchMode::COLUMN          => \PDO::FETCH_COLUMN,
-		FetchMode::CUSTOM_OBJECT   => \PDO::FETCH_CLASS,
-	];
-
-	/**
-	 * @var    array
-	 */
-	private const PARAMETER_TYPE_MAP = [
-		'bool'    => \PDO::PARAM_BOOL,
-		'boolean' => \PDO::PARAM_BOOL,
-		'int'     => \PDO::PARAM_INT,
-		'lob'     => \PDO::PARAM_LOB,
-		'null'    => \PDO::PARAM_NULL,
-		'string'  => \PDO::PARAM_STR,
-	];
-
 	protected \PDOStatement $pdoStatement;
 
 	public function __construct(\PDOStatement $pdoStatement)
@@ -43,7 +20,7 @@ class PdoStatement implements StatementInterface
 		$this->pdoStatement = $pdoStatement;
 	}
 
-	public function bindParam(string|int $parameter, &$variable, string $dataType = 'string', ?int $maxLength = null, ?array $driverOptions = null): bool
+	public function bindParam(string|int $parameter, &$variable, string|int|ParamType $dataType = ParamType::STR, ?int $maxLength = null, ?array $driverOptions = null): bool
 	{
 		$type = $this->convertParameterType($dataType);
 		$extraParameters = \array_slice(\func_get_args(), 3);
@@ -55,7 +32,7 @@ class PdoStatement implements StatementInterface
 		return $this->pdoStatement->bindParam($parameter, $variable, $type, ...$extraParameters);
 	}
 
-	public function bindValue(string|int $parameter, mixed $value, string $dataType = 'string'): bool
+	public function bindValue(string|int $parameter, mixed $value, string|int|ParamType $dataType = ParamType::STR): bool
 	{
 		$type = $this->convertParameterType($dataType);
 
@@ -97,7 +74,15 @@ class PdoStatement implements StatementInterface
 
 	public function execute(?array $parameters = null): bool
 	{
-		return $this->pdoStatement->execute($parameters);
+		try {
+			return $this->pdoStatement->execute($parameters);
+		} catch (\PDOException $e) {
+			throw new ExecutionFailureException(
+				$e->getMessage(),
+				(int)$e->getCode(),
+				$e
+			);
+		}
 	}
 
 	public function fetch(?int $fetchStyle = null, int $cursorOffset = 0)
@@ -106,7 +91,7 @@ class PdoStatement implements StatementInterface
 			return $this->pdoStatement->fetch();
 		}
 
-		return $this->pdoStatement->fetch($this->convertFetchMode($fetchStyle), $cursorOffset);
+		return $this->pdoStatement->fetch($fetchStyle, $cursorOffset);
 	}
 
 	public function rowCount(): int
@@ -116,27 +101,20 @@ class PdoStatement implements StatementInterface
 
 	public function setFetchMode(int $fetchMode, ...$args): void
 	{
-		$this->pdoStatement->setFetchMode($this->convertFetchMode($fetchMode), ...$args);
+		$this->pdoStatement->setFetchMode($fetchMode, ...$args);
 	}
 
-	private function convertFetchMode(int $mode): int
+	private function convertParameterType(string|int|ParamType $type): int
 	{
-		if (!isset(self::FETCH_MODE_MAP[$mode])) {
-			throw new \InvalidArgumentException(sprintf('Unsupported fetch mode `%s`', $mode));
+		if ($type instanceof ParamType) {
+			return $type->value;
 		}
 
-		return self::FETCH_MODE_MAP[$mode];
-	}
-
-	private function convertParameterType(string|int $type): int
-	{
-		if (($k = array_search($type, self::PARAMETER_TYPE_MAP))) {
-			return self::PARAMETER_TYPE_MAP[$k];
+		if (is_int($type)) {
+			return $type;
 		}
 
-		if (!isset(self::PARAMETER_TYPE_MAP[$type])) {
-			throw new \InvalidArgumentException(sprintf('Unsupported parameter type `%s`', $type));
-		}
-		return self::PARAMETER_TYPE_MAP[$type];
+		// Convert string to ParamType enum
+		return ParamType::fromString($type)->value;
 	}
 }

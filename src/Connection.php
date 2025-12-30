@@ -13,12 +13,12 @@ use JDZ\Database\Exception\DatabaseException;
 abstract class Connection implements ConnectionInterface
 {
 	public string $host = 'localhost';
-	public int $port = 3306;
-	public string $socket = '';
-	public string $charset = 'utf8';
 	public string $dbname;
 	public string $user;
 	public string $pass;
+	public int $port = 0;
+	public string $socket = '';
+	public string $charset = 'utf8';
 
 	protected mixed $connection = null;
 

@@ -10,6 +10,7 @@ namespace JDZ\Database\Mysqli;
 use JDZ\Database\Exception\ExecutionFailureException;
 use JDZ\Database\Exception\PrepareStatementFailureException;
 use JDZ\Database\FetchMode;
+use JDZ\Database\ParamType;
 use JDZ\Database\StatementInterface;
 
 class MysqliStatement implements StatementInterface
@@ -17,20 +18,26 @@ class MysqliStatement implements StatementInterface
 	/**
 	 * Values which have been bound to the statement.
 	 */
-	protected array $bindedValues;
+	protected array $bindedValues = [];
 
 	/**
 	 * Mapping between named parameters and position in query.
 	 */
-	protected array $parameterKeyMapping;
+	protected array $parameterKeyMapping = [];
 
 	protected array $parameterTypeMapping = [
 		'bool'    => 'i',
 		'boolean' => 'i',
 		'int'     => 'i',
+		'integer' => 'i',
 		'lob'     => 's',
 		'null'    => 's',
 		'string'  => 's',
+		// PDO constants
+		'1'       => 'i',  // PDO::PARAM_INT
+		'2'       => 's',  // PDO::PARAM_STR
+		'3'       => 'b',  // PDO::PARAM_LOB
+		'5'       => 's',  // PDO::PARAM_NULL
 	];
 
 	/**
@@ -209,15 +216,20 @@ class MysqliStatement implements StatementInterface
 		return $literal;
 	}
 
-	public function bindParam(string|int $parameter, &$variable, string $dataType = 'string', ?int $length = null, array $driverOptions = []): bool
+	public function bindParam(string|int $parameter, &$variable, string|int|ParamType $dataType = ParamType::STR, ?int $length = null, array $driverOptions = []): bool
 	{
-		$this->bindedValues[$parameter] = &$variable;
-
-		if (!isset($this->parameterTypeMapping[$dataType])) {
-			throw new \InvalidArgumentException(sprintf('Unsupported parameter type `%s`', $dataType));
+		// Normalize parameter key - check if we need to add ':' prefix for named parameters
+		$key = $parameter;
+		if (is_string($parameter) && !empty($this->parameterKeyMapping)) {
+			// If parameter doesn't start with ':' but exists with ':' prefix in mapping, add it
+			if ($parameter[0] !== ':' && isset($this->parameterKeyMapping[':' . $parameter])) {
+				$key = ':' . $parameter;
+			}
 		}
-
-		$this->typesKeyMapping[$parameter] = $this->parameterTypeMapping[$dataType];
+		
+		$this->bindedValues[$key] = &$variable;
+		$this->typesKeyMapping[$key] = $this->convertParameterType($dataType);
+		
 		return true;
 	}
 
@@ -239,7 +251,7 @@ class MysqliStatement implements StatementInterface
 
 	public function execute(?array $parameters = null): bool
 	{
-		if (null !== $this->bindedValues) {
+		if (!empty($this->bindedValues)) {
 			$params = [];
 			$types  = [];
 
@@ -326,7 +338,7 @@ class MysqliStatement implements StatementInterface
 
 		$fetchStyle = $fetchStyle ?: $this->defaultFetchStyle;
 
-		if ($fetchStyle === FetchMode::COLUMN) {
+		if ($fetchStyle === FetchMode::COLUMN->value || $fetchStyle === FetchMode::COLUMN) {
 			return $this->fetchColumn();
 		}
 
@@ -340,7 +352,10 @@ class MysqliStatement implements StatementInterface
 			throw new \RuntimeException($this->statement->error, $this->statement->errno);
 		}
 
-		switch ($fetchStyle) {
+		// Handle both enum cases and int values
+		$mode = is_int($fetchStyle) ? FetchMode::from($fetchStyle) : $fetchStyle;
+
+		switch ($mode) {
 			case FetchMode::NUMERIC:
 				return $values;
 
@@ -363,7 +378,7 @@ class MysqliStatement implements StatementInterface
 
 	public function fetchColumn(int $columnIndex = 0)
 	{
-		$row = $this->fetch(FetchMode::NUMERIC);
+		$row = $this->fetch(FetchMode::NUMERIC->value);
 
 		if (false === $row) {
 			return false;
@@ -408,7 +423,25 @@ class MysqliStatement implements StatementInterface
 		return \call_user_func_array([$this->statement, 'bind_param'], $params);
 	}
 
-	private function fetchData(): array|bool
+	private function convertParameterType(string|int|ParamType $type): string
+	{
+		if ($type instanceof ParamType) {
+			$typeValue = $type->value;
+		} elseif (is_string($type)) {
+			$typeValue = ParamType::fromString($type)->value;
+		} else {
+			$typeValue = $type;
+		}
+
+		// Convert PDO integer constant to MySQLi type string
+		if (!isset($this->parameterTypeMapping[$typeValue])) {
+			throw new \InvalidArgumentException(sprintf('Unsupported parameter type `%s`', $type));
+		}
+
+		return $this->parameterTypeMapping[$typeValue];
+	}
+
+	private function fetchData(): array|bool|null
 	{
 		$return = $this->statement->fetch();
 

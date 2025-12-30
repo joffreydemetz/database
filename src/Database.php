@@ -9,11 +9,14 @@ namespace JDZ\Database;
 
 use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Exception\ExecutionFailureException;
-use JDZ\Database\Exception\QueryException;
 use JDZ\Database\DatabaseInterface;
 use JDZ\Database\ConnectionInterface;
-use JDZ\Database\Query;
+use JDZ\Database\StatementInterface;
 use JDZ\Database\FetchMode;
+use JDZ\Database\Query\QueryInterface;
+use JDZ\Database\Query\Query;
+use JDZ\Database\Query\StringQuery;
+use JDZ\Database\Query\SelectQuery;
 
 abstract class Database implements DatabaseInterface
 {
@@ -25,9 +28,11 @@ abstract class Database implements DatabaseInterface
 
   protected ?ConnectionInterface $connection;
   protected ?StatementInterface $statement = null;
-  protected mixed $sql;
+
   protected array $options;
   protected mixed $sqlConn;
+
+  protected ?Query $query = null;
   protected int $limit = 0;
   protected int $offset = 0;
 
@@ -67,23 +72,21 @@ abstract class Database implements DatabaseInterface
 
     $this->count++;
 
-    $bounded = $this->sql->getBounded();
+    $bounded = $this->query->getBounded();
 
     $this->executed = false;
 
     foreach ($bounded as $obj) {
-      $this->statement->bindParam($obj->key, $obj->value, $obj->dataType);
+      $this->statement->bindParam($obj->param, $obj->value, $obj->dataType);
     }
 
     try {
+      $sql = $this->replacePrefix((string)$this->query);
+      $this->lastQueryStr = $sql;
 
-      $sql = $this->replacePrefix((string)$this->sql);
       $this->executed = $this->statement->execute();
     } catch (ExecutionFailureException $e) {
-      /**
-       * @TODO
-       *  useful or not ??
-       */
+      // Attempt reconnection if connection was lost
       if (false === $this->connected()) {
         try {
           $this->connection = null;
@@ -100,63 +103,29 @@ abstract class Database implements DatabaseInterface
     }
   }
 
-  public function query()
+  public function getQuery(): ?QueryInterface
   {
-    return $this->execute();
+    return $this->query;
   }
 
-  /**
-   * @throws  \Callisto\Database\Exception\QueryException
-   */
-  public function getQuery(bool $new = false): Query
-  {
-    if (true === $new) {
-      $query = new Query($this);
-      return $query;
-    }
-
-    return $this->sql;
-  }
-
-  public function setQuery(Query|string $query, int $offset = 0, int $limit = 0)
+  public function setQuery(QueryInterface|string $query): QueryInterface
   {
     $this->connect();
     $this->freeResult();
 
     if (\is_string($query)) {
-      // Allows taking advantage of bound variables in a direct query:
-      $query = $this->getQuery(true)
-        ->setQuery($query);
+      $sQuery = new StringQuery();
+      $sQuery->setQuery($query);
+      $query = $sQuery;
     }
 
-    if (0 === $limit && $query->limit > 0) {
-      $limit = $query->limit;
-    }
+    $this->query = $query;
 
-    if (0 === $offset && $query->offset > 0) {
-      $offset = $query->offset;
-    }
-
-    $query->setLimit($limit, $offset);
-
-    $sql = $this->replacePrefix((string) $query);
+    $sql = $this->replacePrefix((string) $this->query);
 
     $this->statement = $this->prepareStatement($sql);
 
-    $this->sql = $query;
-    $this->limit = max(0, $limit);
-    $this->offset = max(0, $offset);
-    return $this;
-  }
-
-  public function getNullDate(bool $dateTime = true): string
-  {
-    return true === $dateTime ? $this->nullDate : substr($this->nullDate, 0, 10);
-  }
-
-  public function isNullDate(string $testDate): bool
-  {
-    return '' === $testDate || substr($this->nullDate, 0, 10) === substr($testDate, 0, 10);
+    return $this->query;
   }
 
   protected function replacePrefix(string $sql): string
@@ -239,7 +208,7 @@ abstract class Database implements DatabaseInterface
   protected function fetchRow(): array|null|false
   {
     if ($this->statement) {
-      return $this->statement->fetch(FetchMode::MIXED);
+      return $this->statement->fetch(FetchMode::MIXED->value);
     }
     return null;
   }
@@ -247,7 +216,7 @@ abstract class Database implements DatabaseInterface
   protected function fetchArray(): array|null|false
   {
     if ($this->statement) {
-      return $this->statement->fetch(FetchMode::NUMERIC);
+      return $this->statement->fetch(FetchMode::NUMERIC->value);
     }
     return null;
   }
@@ -255,7 +224,7 @@ abstract class Database implements DatabaseInterface
   protected function fetchAssoc(): array|null|false
   {
     if ($this->statement) {
-      return $this->statement->fetch(FetchMode::ASSOCIATIVE);
+      return $this->statement->fetch(FetchMode::ASSOCIATIVE->value);
     }
     return null;
   }
@@ -274,15 +243,10 @@ abstract class Database implements DatabaseInterface
 
   public function loadAssoc(): array|null
   {
-    $this->connect();
-
-    $result = null;
-
     $this->execute();
 
-    $row = $this->fetchAssoc();
-
-    if ($row) {
+    $result = null;
+    if ($row = $this->fetchAssoc()) {
       $result = $row;
     }
 
@@ -293,15 +257,10 @@ abstract class Database implements DatabaseInterface
 
   public function loadRow(): array|null
   {
-    $this->connect();
-
-    $result = null;
-
     $this->execute();
 
-    $row = $this->fetchArray();
-
-    if ($row) {
+    $result = null;
+    if ($row = $this->fetchArray()) {
       $result = $row;
     }
 
@@ -312,12 +271,9 @@ abstract class Database implements DatabaseInterface
 
   public function loadColumn(string|int $column = 0): array
   {
-    $this->connect();
-
-    $results = [];
-
     $this->execute();
 
+    $results = [];
     while ($row = $this->fetchRow()) {
       $results[] = $row[$column];
     }
@@ -329,12 +285,9 @@ abstract class Database implements DatabaseInterface
 
   public function loadResult()
   {
-    $this->connect();
-
-    $result = null;
-
     $this->execute();
 
+    $result = null;
     if ($rows = $this->loadColumn()) {
       $result = $rows[0];
     }
@@ -346,14 +299,10 @@ abstract class Database implements DatabaseInterface
 
   public function loadObject(string $class = \stdClass::class): object|null
   {
-    $this->connect();
-
-    $result = null;
-
     if ($this->statement) {
-      $fetchMode = $class === \stdClass::class ? FetchMode::STANDARD_OBJECT : FetchMode::CUSTOM_OBJECT;
+      $fetchMode = $class === \stdClass::class ? FetchMode::STANDARD_OBJECT->value : FetchMode::CUSTOM_OBJECT->value;
 
-      if ($fetchMode === FetchMode::STANDARD_OBJECT) {
+      if ($fetchMode === FetchMode::STANDARD_OBJECT->value) {
         $this->statement->setFetchMode($fetchMode);
       } else {
         $this->statement->setFetchMode($fetchMode, $class);
@@ -362,9 +311,8 @@ abstract class Database implements DatabaseInterface
 
     $this->execute();
 
-    $object = $this->fetchObject();
-
-    if ($object) {
+    $result = null;
+    if ($object = $this->fetchObject()) {
       $result = $object;
     }
 
@@ -375,12 +323,9 @@ abstract class Database implements DatabaseInterface
 
   public function loadAssocList(string $key = '', string $column = ''): array
   {
-    $this->connect();
-
-    $results = [];
-
     $this->execute();
 
+    $results = [];
     while ($row = $this->fetchAssoc()) {
       $value = $column ? ($row[$column] ?? $row) : $row;
 
@@ -398,12 +343,9 @@ abstract class Database implements DatabaseInterface
 
   public function loadRowList(string $key = ''): array
   {
-    $this->connect();
-
-    $results = [];
-
     $this->execute();
 
+    $results = [];
     while ($row = $this->fetchArray()) {
       if ($key) {
         $results[$row[$key]] = $row;
@@ -419,14 +361,10 @@ abstract class Database implements DatabaseInterface
 
   public function loadObjectList(string $key = '', string $class = \stdClass::class): array
   {
-    $this->connect();
-
-    $results = [];
-
     if ($this->statement) {
-      $fetchMode = $class === \stdClass::class ? FetchMode::STANDARD_OBJECT : FetchMode::CUSTOM_OBJECT;
+      $fetchMode = $class === \stdClass::class ? FetchMode::STANDARD_OBJECT->value : FetchMode::CUSTOM_OBJECT->value;
 
-      if ($fetchMode === FetchMode::STANDARD_OBJECT) {
+      if ($fetchMode === FetchMode::STANDARD_OBJECT->value) {
         $this->statement->setFetchMode($fetchMode);
       } else {
         $this->statement->setFetchMode($fetchMode, $class);
@@ -435,6 +373,7 @@ abstract class Database implements DatabaseInterface
 
     $this->execute();
 
+    $results = [];
     while ($row = $this->fetchObject()) {
       if ($key) {
         $results[$row->$key] = $row;
@@ -444,8 +383,7 @@ abstract class Database implements DatabaseInterface
     }
 
     $this->freeResult();
-    // debug((string)$this->sql);
-    // debug($results);
+
     return $results;
   }
 
@@ -480,7 +418,6 @@ abstract class Database implements DatabaseInterface
     }
   }
 
-
   /******************************* 
    * RECORDS QUERY SHORTCUTS
    *******************************/
@@ -496,31 +433,16 @@ abstract class Database implements DatabaseInterface
       $where[] = $this->quoteName($key) . '=' . $this->quote($value);
     }
 
-    $query = $this->getQuery(true)
-      ->select($selectField)
-      ->from($tblName)
-      ->where($where);
-
-    $this->setQuery($query);
+    $this->setQuery(' SELECT ' . $selectField . ' FROM ' . $tblName . ' WHERE ' . implode(' AND ', $where));
 
     $id = (int) $this->loadResult();
 
     return $id > 0;
   }
 
-
   /******************************* 
-   * SANITIZE
+   * QUOTES
    *******************************/
-
-  public function escape(string $text, bool $extra = false): string
-  {
-    if (true === $extra) {
-      $text = \addcslashes($text, '%_');
-    }
-
-    return $text;
-  }
 
   public function quote(string $text, bool $escape = true): string
   {
@@ -535,15 +457,6 @@ abstract class Database implements DatabaseInterface
     }
 
     return '\'' . $text . '\'';
-  }
-
-  public function valuesToString(array $values): string
-  {
-    $in = [];
-    foreach ($values as $value) {
-      $in[] = $this->quote($value);
-    }
-    return implode(', ', $in);
   }
 
   public function quoteName(string $name, string|null $as = null): string
@@ -566,5 +479,57 @@ abstract class Database implements DatabaseInterface
     }
 
     return implode('.', $parts);
+  }
+
+  /******************************* 
+   * SANITIZE
+   *******************************/
+
+  public function escape(string $text, bool $extra = false): string
+  {
+    // Note: Driver-specific implementations should override this
+    // This base implementation provides basic escaping
+    if (true === $extra) {
+      $text = \addcslashes($text, '%_');
+    }
+
+    return $text;
+  }
+
+  public function getNullDate(bool $dateTime = true): string
+  {
+    return true === $dateTime ? $this->nullDate : substr($this->nullDate, 0, 10);
+  }
+
+  public function isNullDate(string $testDate): bool
+  {
+    return '' === $testDate || substr($this->nullDate, 0, 10) === substr($testDate, 0, 10);
+  }
+
+  public function valuesToString(array $values): string
+  {
+    $in = [];
+    foreach ($values as $value) {
+      $in[] = $this->quote($value);
+    }
+    return implode(', ', $in);
+  }
+
+  public function currentTimestamp(): string
+  {
+    return 'CURRENT_TIMESTAMP';
+  }
+
+  public function charLength(string $field): string
+  {
+    return 'CHAR_LENGTH(' . $field . ')';
+  }
+
+  public function concatenate(array $values, string $separator = ''): string
+  {
+    if ($separator) {
+      return 'CONCAT_WS(' . $this->quote($separator) . ', ' . implode(', ', $values) . ')';
+    }
+    return 'CONCAT(' . implode(', ', $values) . ')';
   }
 }
