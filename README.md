@@ -220,14 +220,13 @@ Tests automatically start/stop Docker containers for MySQL and PostgreSQL, ensur
 - **FetchModeTest** - FetchMode enum validation
 - **ParamTypeTest** - ParamType enum with fromString() conversion
 
-**Query Builder Tests** (2,156 lines of comprehensive testing)
-- **SelectQueryTest** (517 lines) - SELECT with WHERE, JOIN, GROUP BY, HAVING, ORDER BY, LIMIT
-- **InsertQueryTest** (345 lines) - INSERT with columns/values, SET syntax, IGNORE modifier
-- **UpdateQueryTest** (315 lines) - UPDATE with SET, WHERE, JOIN, ORDER BY, LIMIT
-- **DeleteQueryTest** (302 lines) - DELETE with WHERE, JOIN, ORDER BY, LIMIT
-- **UnionQueryTest** (379 lines) - UNION ALL, UNION DISTINCT, ORDER BY, LIMIT
-- **StringQueryTest** (398 lines) - Raw SQL with parameter binding
-
+**Query Builder Tests**
+- **SelectQueryTest** - SELECT with WHERE, JOIN, GROUP BY, HAVING, ORDER BY, LIMIT
+- **InsertQueryTest** - INSERT with columns/values, SET syntax, IGNORE modifier
+- **UpdateQueryTest** - UPDATE with SET, WHERE, JOIN, ORDER BY, LIMIT
+- **DeleteQueryTest** - DELETE with WHERE, JOIN, ORDER BY, LIMIT
+- **UnionQueryTest** - UNION ALL, UNION DISTINCT, ORDER BY, LIMIT
+- **StringQueryTest** - Raw SQL with parameter binding
 **Integration Tests** (automatically skip if driver unavailable)
 - **PdoDatabaseTest** - MySQL/MariaDB via PDO driver
 - **MysqliDatabaseTest** - MySQL/MariaDB via MySQLi native driver
