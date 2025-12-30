@@ -1,25 +1,16 @@
 <?php
 
 /**
- * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
- * 
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * @author    Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
 namespace JDZ\Database\Pdo;
 
 use JDZ\Database\Database;
 use JDZ\Database\Pdo\PdoStatement;
-use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Exception\PrepareStatementFailureException;
-// use JDZ\Database\Exception\ExecutionFailureException;
 
-/**
- * Database
- * 
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
- */
 class PdoDatabase extends Database
 {
 	public string $nullDate = '1000-01-01 00:00:00';
@@ -47,7 +38,7 @@ class PdoDatabase extends Database
 	{
 		if (!$this->sqlConn) {
 			$this->connection = new PdoConnection($this->options['host'], $this->options['dbname'], $this->options['user'], $this->options['pass']);
-			$this->connection->charset = $this->options['charset'];
+			$this->connection->charset = $this->options['charset'] ?? 'utf8';
 
 			if ($this->options['driver']) {
 				$this->connection->driver = $this->options['driver'];
@@ -57,7 +48,7 @@ class PdoDatabase extends Database
 				$this->connection->port = $this->options['port'];
 			}
 
-			if ($this->options['socket']) {
+			if (!empty($this->options['socket'])) {
 				$this->connection->socket = $this->options['socket'];
 			}
 
@@ -67,34 +58,17 @@ class PdoDatabase extends Database
 
 	public function connected(): bool
 	{
-		static $checkingConnected = false;
-
-		if ($checkingConnected) {
-			$checkingConnected = false;
-			throw new \LogicException('Recursion trying to check if connected.');
+		if (!$this->sqlConn) {
+			return false;
 		}
-
-		$sql = $this->sql;
-		$limit = $this->limit;
-		$offset = $this->offset;
-		$statement = $this->statement;
 
 		try {
-			$checkingConnected = true;
-			$this->setQuery($this->getQuery());
-			$status = (bool) $this->loadResult();
-		} catch (\Exception $e) {
-			$status = false;
+			// Simple query to test connection
+			$this->sqlConn->query('SELECT 1');
+			return true;
+		} catch (\PDOException $e) {
+			return false;
 		}
-
-		$this->sql         = $sql;
-		$this->limit       = $limit;
-		$this->offset      = $offset;
-		$this->statement   = $statement;
-
-		$checkingConnected = false;
-
-		return $status;
 	}
 
 	public function insertid(): int
@@ -117,34 +91,187 @@ class PdoDatabase extends Database
 		return addcslashes($text, "\000\n\r\\\032");
 	}
 
-	public function execute()
+	// Database Information Methods
+
+	public function getVersion(): string
 	{
-		//$this->executed = false;
-		$this->connect();
+		$this->setQuery('SELECT VERSION()');
+		return (string)$this->loadResult();
+	}
 
-		$sql = $this->replacePrefix((string)$this->sql);
-		$this->lastQueryStr = $sql;
+	public function getCollation(): string|null
+	{
+		$this->setQuery('SELECT @@collation_database');
+		$result = $this->loadResult();
+		return $result ? (string)$result : null;
+	}
 
-		$bounded = $this->sql->getBounded();
+	public function getDatabaseName(): string
+	{
+		$this->setQuery('SELECT DATABASE()');
+		return (string)$this->loadResult();
+	}
 
+	// Table Query Methods
 
-		foreach ($bounded as $key => $obj) {
-			$this->statement->bindParam($key, $obj->value, $obj->dataType, $obj->maxLength, $obj->driverOptions);
+	public function getTableList(): array
+	{
+		$this->setQuery('SHOW TABLES');
+		return $this->loadColumn() ?: [];
+	}
+
+	public function getTableColumns(string $table, bool $full = false): array
+	{
+		$table = str_replace('#__', $this->tablePrefix, $table);
+		$this->setQuery('SHOW ' . ($full ? 'FULL ' : '') . 'COLUMNS FROM ' . $this->quoteName($table));
+
+		$fields = $this->loadObjectList();
+		$results = [];
+
+		if ($fields) {
+			foreach ($fields as $field) {
+				$field->Type = preg_replace("/^([^\\(]+).*$/", "$1", $field->Type);
+				$results[$field->Field] = $field;
+			}
 		}
 
-		try {
+		return $results;
+	}
 
-			$this->statement->execute();
-			//$this->executed = true;
+	public function getTableKeys(string $table): array
+	{
+		$table = str_replace('#__', $this->tablePrefix, $table);
+		$this->setQuery('SHOW KEYS FROM ' . $this->quoteName($table));
+		return $this->loadObjectList() ?: [];
+	}
 
+	public function getTableCreate(array $tables): array
+	{
+		$results = [];
+
+		foreach ($tables as $table) {
+			$this->setQuery('SHOW CREATE table ' . $this->quoteName($this->escape($table)));
+			$row = $this->loadRow();
+			if ($row) {
+				$results[$table] = $row[1];
+			}
+		}
+
+		return $results;
+	}
+
+	public function tableExists(string $table): bool
+	{
+		$table = str_replace('#__', $this->tablePrefix, $table);
+		return in_array($table, $this->getTableList());
+	}
+
+	public function dropTable(string $table): void
+	{
+		if (!$this->tableExists($table)) {
 			return;
-		} catch (\PDOException $exception) {
-			$errorNum = $this->statement->errorCode();
-			$errorMsg = $this->statement->errorInfo();
-
-			throw (new DatabaseException($errorMsg, $errorNum, $exception))
-				->setSql($sql);
 		}
+
+		$table = str_replace('#__', $this->tablePrefix, $table);
+		$this->setQuery('DROP TABLE ' . $this->quoteName($table));
+		$this->execute();
+	}
+
+	public function renameTable(string $oldTable, string $newTable): void
+	{
+		if (!$this->tableExists($oldTable) || $this->tableExists($newTable)) {
+			return;
+		}
+
+		$oldTable = str_replace('#__', $this->tablePrefix, $oldTable);
+		$newTable = str_replace('#__', $this->tablePrefix, $newTable);
+		$this->setQuery('RENAME TABLE ' . $this->quoteName($oldTable) . ' TO ' . $this->quoteName($newTable));
+		$this->execute();
+	}
+
+	public function truncateTable(string $table): void
+	{
+		if (!$this->tableExists($table)) {
+			return;
+		}
+
+		$table = str_replace('#__', $this->tablePrefix, $table);
+		$this->setQuery('TRUNCATE TABLE ' . $this->quoteName($table));
+		$this->execute();
+	}
+
+	// MySQL-specific Methods
+
+	protected bool $profiling = false;
+
+	public function startProfiling(): void
+	{
+		$this->profiling = true;
+		$this->setQuery('SET profiling = 1');
+		$this->execute();
+	}
+
+	public function showProfiles(): array|null
+	{
+		if (!$this->profiling) {
+			return null;
+		}
+
+		$profiles = [];
+		$this->setQuery('SHOW PROFILES');
+
+		$rows = $this->loadAssocList();
+		if ($rows) {
+			foreach ($rows as $row) {
+				$this->setQuery('SHOW PROFILE FOR QUERY ' . $row['Query_ID']);
+				$row['infos'] = $this->loadAssocList();
+				$profiles[] = $row;
+			}
+		}
+
+		return $profiles;
+	}
+
+	public function stopProfiling(): void
+	{
+		if ($this->profiling) {
+			$this->setQuery('SET profiling = 0');
+			$this->execute();
+			$this->profiling = false;
+		}
+	}
+
+	public function lockTable(string $table): void
+	{
+		$table = str_replace('#__', $this->tablePrefix, $table);
+		$this->setQuery('LOCK TABLES ' . $this->quoteName($table) . ' WRITE');
+		$this->execute();
+	}
+
+	public function unlockTables(): void
+	{
+		$this->setQuery('UNLOCK TABLES');
+		$this->execute();
+	}
+
+	// Transaction Methods
+
+	public function transactionStart(): void
+	{
+		$this->setQuery('START TRANSACTION');
+		$this->execute();
+	}
+
+	public function transactionCommit(): void
+	{
+		$this->setQuery('COMMIT');
+		$this->execute();
+	}
+
+	public function transactionRollback(): void
+	{
+		$this->setQuery('ROLLBACK');
+		$this->execute();
 	}
 
 	public function prepareStatement(string $query): PdoStatement
@@ -152,9 +279,12 @@ class PdoDatabase extends Database
 		try {
 			return new PdoStatement($this->sqlConn->prepare($query, $this->options['driverOptions']));
 		} catch (\PDOException $e) {
-			throw new PrepareStatementFailureException($e->getMessage(), $e->getCode(), $e);
+			throw new PrepareStatementFailureException($e->getMessage(), (int)$e->getCode(), $e);
 		}
+	}
 
-		return new PdoStatement($this->sqlConn, $query);
+	public function currentTimestamp(): string
+	{
+		return 'NOW()';
 	}
 }

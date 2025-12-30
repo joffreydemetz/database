@@ -1,10 +1,18 @@
 {
     "name": "jdz/database",
     "type": "library",
-    "description": "JDZ Database",
+    "description": "Unified database abstraction layer supporting MySQL, MariaDB, PostgreSQL, and SQLite via PDO and MySQLi drivers",
     "keywords": [
         "JDZ",
-        "database"
+        "database",
+        "mysql",
+        "mariadb",
+        "postgresql",
+        "sqlite",
+        "pdo",
+        "mysqli",
+        "query builder",
+        "database abstraction"
     ],
     "homepage": "https://jdz.joffreydemetz.com/database/",
     "license": "MIT",
@@ -17,11 +25,45 @@
         }
     ],
     "require": {
-        "php": ">=8.1"
+        "php": ">=8.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "michel/dotenv": "^1.0"
+    },
+    "suggest": {
+        "ext-pdo": "Mandatory for PDO database drivers (MySQL, PostgreSQL, SQLite)",
+        "ext-pdo_mysql": "For MySQL/MariaDB support via PDO",
+        "ext-pdo_pgsql": "For PostgreSQL support",
+        "ext-pdo_sqlite": "For SQLite support",
+        "ext-mysqli": "For MySQL/MariaDB support via MySQLi (alternative to PDO)"
     },
     "autoload": {
         "psr-4": {
             "JDZ\\Database\\": "src"
         }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JDZ\\Database\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "phpunit": "phpunit --colors=always",
+        "docker-up": "docker compose up -d",
+        "docker-down": "docker compose down",
+        "docker-wait": "@php -r \"echo 'Waiting for databases to be ready...' . PHP_EOL; sleep(15); echo 'Ready!' . PHP_EOL;\"",
+        "test": [
+            "@docker-up",
+            "@docker-wait",
+            "@phpunit",
+            "@docker-down"
+        ],
+        "examples": [
+            "@docker-up",
+            "@docker-wait",
+            "php examples/run.php",
+            "@docker-down"
+        ]
     }
 }

@@ -1,10 +1,8 @@
 <?php
 
 /**
- * (c) Joffrey Demetz <joffrey.demetz@gmail.com>
- * 
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+ * @author    Joffrey Demetz <joffrey.demetz@gmail.com>
+ * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
 namespace JDZ\Database;
@@ -12,20 +10,15 @@ namespace JDZ\Database;
 use JDZ\Database\ConnectionInterface;
 use JDZ\Database\Exception\DatabaseException;
 
-/**
- * Connection
- * 
- * @author  Joffrey Demetz <joffrey.demetz@gmail.com>
- */
 abstract class Connection implements ConnectionInterface
 {
 	public string $host = 'localhost';
-	public int $port = 3306;
-	public string $socket = '';
-	public string $charset = 'utf8';
 	public string $dbname;
 	public string $user;
 	public string $pass;
+	public int $port = 0;
+	public string $socket = '';
+	public string $charset = 'utf8';
 
 	protected mixed $connection = null;
 
