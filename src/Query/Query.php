@@ -21,6 +21,11 @@ abstract class Query implements QueryInterface
 {
   protected array $bounded = [];
 
+  public function __toString(): string
+  {
+    return $this->toString();
+  }
+  
   /**
    * Convert the query to a SQL string
    * 
