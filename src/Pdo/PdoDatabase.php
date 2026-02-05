@@ -24,11 +24,19 @@ class PdoDatabase extends Database
 	public function __construct(array $options)
 	{
 		if (empty($options['driver'])) {
-			$options['driver'] = 'mysqli';
+			$options['driver'] = 'mysql';
 		}
 
 		if (empty($options['port'])) {
-			$options['port'] = 3306;
+			$options['port'] = $options['driver'] === 'sqlite' ? 0 : 3306;
+		}
+
+		$options['host'] = $options['host'] ?? '';
+		$options['user'] = $options['user'] ?? '';
+		$options['pass'] = $options['pass'] ?? '';
+
+		if ($options['driver'] === 'sqlite') {
+			$this->nameQuote = '"';
 		}
 
 		parent::__construct($options);
@@ -37,7 +45,12 @@ class PdoDatabase extends Database
 	public function connect()
 	{
 		if (!$this->sqlConn) {
-			$this->connection = new PdoConnection($this->options['host'], $this->options['dbname'], $this->options['user'], $this->options['pass']);
+			$this->connection = new PdoConnection(
+				$this->options['host'] ?? '',
+				$this->options['dbname'],
+				$this->options['user'] ?? '',
+				$this->options['pass'] ?? ''
+			);
 			$this->connection->charset = $this->options['charset'] ?? 'utf8';
 
 			if ($this->options['driver']) {

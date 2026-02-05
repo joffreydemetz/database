@@ -22,7 +22,7 @@ abstract class Connection implements ConnectionInterface
 
 	protected mixed $connection = null;
 
-	public function __construct(string $host, string $dbname, string $user, string $pass)
+	public function __construct(string $host, string $dbname, string $user = '', string $pass = '')
 	{
 		$this->checkIfDriverAvailable();
 
@@ -31,20 +31,8 @@ abstract class Connection implements ConnectionInterface
 		$this->user = $user;
 		$this->pass = $pass;
 
-		if ('' === $this->host) {
-			throw new DatabaseException('Missing host');
-		}
-
 		if ('' === $this->dbname) {
 			throw new DatabaseException('Missing dbname');
-		}
-
-		if ('' === $this->user) {
-			throw new DatabaseException('Missing user');
-		}
-
-		if ('' === $this->pass) {
-			throw new DatabaseException('Missing pass');
 		}
 	}
 }

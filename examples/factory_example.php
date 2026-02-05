@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
@@ -12,27 +13,27 @@ echo "\n";
 
 // Check if specific driver is available
 if (DatabaseFactory::isDriverAvailable('pgsql')) {
-    echo "✓ PostgreSQL driver is available\n";
+    echo "PostgreSQL driver is available\n";
 } else {
-    echo "✗ PostgreSQL driver is NOT available\n";
+    echo "PostgreSQL driver is NOT available\n";
 }
 
 if (DatabaseFactory::isDriverAvailable('mysql')) {
-    echo "✓ MySQL driver is available\n";
+    echo "MySQL driver is available\n";
 } else {
-    echo "✗ MySQL driver is NOT available\n";
+    echo "MySQL driver is NOT available\n";
 }
 
 if (DatabaseFactory::isDriverAvailable('sqlite')) {
-    echo "✓ SQLite driver is available\n";
+    echo "SQLite driver is available\n";
 } else {
-    echo "✗ SQLite driver is NOT available\n";
+    echo "SQLite driver is NOT available\n";
 }
 
 if (DatabaseFactory::isDriverAvailable('mariadb')) {
-    echo "✓ MariaDB driver is available\n";
+    echo "MariaDB driver is available\n";
 } else {
-    echo "✗ MariaDB driver is NOT available\n";
+    echo "MariaDB driver is NOT available\n";
 }
 
 echo "\n";
@@ -40,33 +41,16 @@ echo "\n";
 // Create database connections from configuration arrays
 echo "=== Creating Database Instances ===\n\n";
 
-// MySQL
-$mysql = DatabaseFactory::create([
-    'driver' => 'mysql',
-    'host'   => getenv('JDZ_MYSQL_HOST') ?: 'localhost',
-    'dbname' => getenv('JDZ_MYSQL_DB') ?: 'test_db',
-    'user'   => getenv('JDZ_MYSQL_USER') ?: 'root',
-    'pass'   => getenv('JDZ_MYSQL_PASS') ?: 'password',
-    'port'   => getenv('JDZ_MYSQL_PORT') ?: 3306
-]);
+// MySQL - using getDatabaseConfig() helper
+$mysql = DatabaseFactory::create(getDatabaseConfig('mysql'));
 echo "Created MySQL instance\n";
 
 // PostgreSQL
-$pgsql = DatabaseFactory::create([
-    'driver' => 'pgsql',
-    'host'   => getenv('JDZ_PGSQL_HOST') ?: 'localhost',
-    'dbname' => getenv('JDZ_PGSQL_DB') ?: 'test_db',
-    'user'   => getenv('JDZ_PGSQL_USER') ?: 'root',
-    'pass'   => getenv('JDZ_PGSQL_PASS') ?: 'password',
-    'port'   => getenv('JDZ_PGSQL_PORT') ?: 5432
-]);
+$pgsql = DatabaseFactory::create(getDatabaseConfig('pgsql'));
 echo "Created PostgreSQL instance\n";
 
 // SQLite
-$sqlite = DatabaseFactory::create([
-    'driver' => 'sqlite',
-    'dbname' => getenv('JDZ_SQLITE_PATH') ?: ':memory:'
-]);
+$sqlite = DatabaseFactory::create(getDatabaseConfig('sqlite'));
 echo "Created SQLite instance\n";
 
 echo "\n";

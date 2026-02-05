@@ -1,0 +1,45 @@
+<?php
+/**
+ * Database Configuration Template
+ *
+ * Copy this file to config.php and update with your values.
+ * config.php is gitignored for security.
+ */
+
+return [
+    'database' => [
+        // Default driver: 'sqlite', 'mysql', 'pgsql', 'mariadb'
+        'driver' => 'sqlite',
+
+        'sqlite' => [
+            'path' => __DIR__ . '/examples/database.sqlite',
+        ],
+
+        'mysql' => [
+            'host' => 'localhost',
+            'port' => 3306,
+            'user' => 'root',
+            'password' => 'password',
+            'database' => 'test_db',
+        ],
+
+        'pgsql' => [
+            'host' => 'localhost',
+            'port' => 5432,
+            'user' => 'root',
+            'password' => 'password',
+            'database' => 'test_db',
+        ],
+
+        'mariadb' => [
+            'host' => 'localhost',
+            'port' => 3306,
+            'user' => 'root',
+            'password' => 'password',
+            'database' => 'test_db',
+        ],
+
+        // Table prefix (replaced automatically for #__ pattern)
+        'prefix' => 'app_',
+    ],
+];
