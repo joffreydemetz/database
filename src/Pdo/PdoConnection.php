@@ -25,26 +25,36 @@ class PdoConnection extends Connection
       return $this->connection;
     }
 
-    $dsn = $this->driver . ':dbname=' . $this->dbname . ';host=' . $this->host;
+    if ($this->driver === 'sqlite') {
+      $dsn = 'sqlite:' . $this->dbname;
+      $user = null;
+      $pass = null;
+    } else {
+      $dsn = $this->driver . ':dbname=' . $this->dbname . ';host=' . $this->host;
 
-    if ($this->port) {
-      $dsn .= ';port=' . $this->port;
+      if ($this->port) {
+        $dsn .= ';port=' . $this->port;
+      }
+
+      if ($this->socket) {
+        $dsn .= ';unix_socket=' . $this->socket;
+      }
+
+      if ($this->charset && $this->driver === 'mysql') {
+        $dsn .= ';charset=' . $this->charset;
+      }
+
+      $user = $this->user;
+      $pass = $this->pass;
     }
-
-    if ($this->socket) {
-      $dsn .= ';unix_socket=' . $this->socket;
-    }
-
-    // MySQL and SQLite support charset in DSN, PostgreSQL doesn't
-    if ($this->charset && in_array($this->driver, ['mysql', 'sqlite'], true)) {
-      $dsn .= ';charset=' . $this->charset;
-    }
-
-    // $attrs[\PDO::ATTR_ERRMODE] = \PDO::ERRMODE_EXCEPTION;
 
     try {
-      $this->connection = new \PDO($dsn, $this->user, $this->pass, $attrs);
+      $this->connection = new \PDO($dsn, $user, $pass, $attrs);
       $this->connection->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+
+      if ($this->driver === 'sqlite') {
+        $this->connection->exec('PRAGMA foreign_keys = ON');
+      }
     } catch (\PDOException $e) {
       throw new DatabaseException('Could not connect to PDO: ' . $e->getMessage(), $e->getCode(), $e);
     }
