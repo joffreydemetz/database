@@ -8,7 +8,7 @@
 namespace JDZ\Database\Pdo;
 
 use JDZ\Database\ParamType;
-use JDZ\Database\StatementInterface;
+use JDZ\Database\Contract\StatementInterface;
 use JDZ\Database\Exception\ExecutionFailureException;
 
 class PdoStatement implements StatementInterface

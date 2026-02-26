@@ -5,11 +5,11 @@
  * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
-namespace JDZ\Database;
+namespace JDZ\Database\Contract;
 
 /**
  * Database Statement Interface
- * 
+ *
  * Defines the contract for prepared statement implementations
  * Supports both PDOStatement and mysqli_stmt wrappers
  */
@@ -17,7 +17,7 @@ interface StatementInterface
 {
 	/**
 	 * Bind a parameter to a variable
-	 * 
+	 *
 	 * @param   string|int  $parameter      Parameter identifier (name or position)
 	 * @param   mixed       $variable       Variable to bind (by reference)
 	 * @param   string      $dataType       Data type (string, int, bool, lob, null)
@@ -34,21 +34,21 @@ interface StatementInterface
 
 	/**
 	 * Get the error code from the last statement operation
-	 * 
+	 *
 	 * @return  int  Error code
 	 */
 	public function errorCode(): int;
 
 	/**
 	 * Get the error message from the last statement operation
-	 * 
+	 *
 	 * @return  string  Error message
 	 */
 	public function errorInfo(): string;
 
 	/**
 	 * Execute the prepared statement
-	 * 
+	 *
 	 * @param   array|null  $parameters  Optional array of parameters to bind
 	 * @return  bool        True on success
 	 */
@@ -56,7 +56,7 @@ interface StatementInterface
 
 	/**
 	 * Fetch a row from the result set
-	 * 
+	 *
 	 * @param   int|null  $fetchStyle    Fetch mode (see FetchMode constants)
 	 * @param   int       $cursorOffset  Row offset for cursor-oriented fetch
 	 * @return  mixed     Fetched row or false
@@ -65,14 +65,14 @@ interface StatementInterface
 
 	/**
 	 * Get the number of rows affected or returned
-	 * 
+	 *
 	 * @return  int  Row count
 	 */
 	public function rowCount(): int;
 
 	/**
 	 * Set the default fetch mode for this statement
-	 * 
+	 *
 	 * @param   int    $fetchMode  Fetch mode constant
 	 * @param   mixed  ...$args    Additional arguments (class name, constructor args, etc.)
 	 */

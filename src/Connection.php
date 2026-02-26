@@ -7,7 +7,7 @@
 
 namespace JDZ\Database;
 
-use JDZ\Database\ConnectionInterface;
+use JDZ\Database\Contract\ConnectionInterface;
 use JDZ\Database\Exception\DatabaseException;
 
 abstract class Connection implements ConnectionInterface

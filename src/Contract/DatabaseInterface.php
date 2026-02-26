@@ -5,29 +5,25 @@
  * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
-namespace JDZ\Database;
-
-use JDZ\Database\Exception\DatabaseException;
-use JDZ\Database\StatementInterface;
-use JDZ\Database\Query\QueryInterface;
+namespace JDZ\Database\Contract;
 
 /**
  * Database Driver Interface
- * 
+ *
  * Defines the contract for all database drivers (PDO MySQL, PDO PostgreSQL, PDO SQLite, MySQLi, MariaDB)
  */
 interface DatabaseInterface
 {
   /**
    * Establish database connection
-   * 
-   * @throws  DatabaseException
+   *
+   * @throws  \JDZ\Database\Exception\DatabaseException
    */
   public function connect();
 
   /**
    * Check if database is connected
-   * 
+   *
    * @return  bool  True if connected, false otherwise
    */
   public function connected(): bool;
@@ -39,14 +35,14 @@ interface DatabaseInterface
 
   /**
    * Get the ID generated from the previous INSERT operation
-   * 
+   *
    * @return  int  The insert ID
    */
   public function insertid(): int;
 
   /**
    * Escape a string for safe SQL usage
-   * 
+   *
    * @param   string  $text   String to escape
    * @param   bool    $extra  If true, also escape wildcards (% and _)
    * @return  string  Escaped string
@@ -55,17 +51,17 @@ interface DatabaseInterface
 
   /**
    * Prepare a SQL statement
-   * 
+   *
    * @param   string  $query  The SQL query to prepare
    * @return  StatementInterface  The prepared statement
-   * @throws  DatabaseException
+   * @throws  \JDZ\Database\Exception\DatabaseException
    */
   public function prepareStatement(string $query): StatementInterface;
 
   /**
    * Execute the current query
-   * 
-   * @throws  DatabaseException
+   *
+   * @throws  \JDZ\Database\Exception\DatabaseException
    */
   public function execute();
 
@@ -76,7 +72,7 @@ interface DatabaseInterface
 
   /**
    * Set the SQL query object to execute
-   * 
+   *
    * @param   QueryInterface|string  $query   The SQL query
    * @return  QueryInterface  The query object
    */
@@ -84,7 +80,7 @@ interface DatabaseInterface
 
   /**
    * Get the null date string for this database
-   * 
+   *
    * @param   bool    $dateTime  If true, return datetime format, else date only
    * @return  string  The null date string
    */
@@ -92,7 +88,7 @@ interface DatabaseInterface
 
   /**
    * Check if a date string is a null date
-   * 
+   *
    * @param   string  $testDate  The date to test
    * @return  bool    True if null date
    */
@@ -100,21 +96,21 @@ interface DatabaseInterface
 
   /**
    * Load a single associative array from the query result
-   * 
+   *
    * @return  array|null  Associative array or null if no result
    */
   public function loadAssoc(): array|null;
 
   /**
    * Load a single indexed array from the query result
-   * 
+   *
    * @return  array|null  Indexed array or null if no result
    */
   public function loadRow(): array|null;
 
   /**
    * Load a single column from all result rows
-   * 
+   *
    * @param   string|int  $column  Column index or name
    * @return  array       Array of column values
    */
@@ -122,14 +118,14 @@ interface DatabaseInterface
 
   /**
    * Load a single result value
-   * 
+   *
    * @return  mixed  Single value or null
    */
   public function loadResult();
 
   /**
    * Load a single object from the query result
-   * 
+   *
    * @param   string  $class  Class name to instantiate
    * @return  object|null  Object or null if no result
    */
@@ -137,7 +133,7 @@ interface DatabaseInterface
 
   /**
    * Load all result rows as associative arrays
-   * 
+   *
    * @param   string  $key     Column to use as array key
    * @param   string  $column  Column to use as value (if empty, use full row)
    * @return  array   Array of associative arrays
@@ -146,7 +142,7 @@ interface DatabaseInterface
 
   /**
    * Load all result rows as indexed arrays
-   * 
+   *
    * @param   string  $key  Column to use as array key
    * @return  array   Array of indexed arrays
    */
@@ -154,7 +150,7 @@ interface DatabaseInterface
 
   /**
    * Load all result rows as objects
-   * 
+   *
    * @param   string  $key    Column to use as array key
    * @param   string  $class  Class name to instantiate
    * @return  array   Array of objects
@@ -163,21 +159,21 @@ interface DatabaseInterface
 
   /**
    * Get the number of rows in the result set
-   * 
+   *
    * @return  int  Number of rows
    */
   public function getNumRows(): int;
 
   /**
    * Get the number of rows affected by the last query
-   * 
+   *
    * @return  int  Number of affected rows
    */
   public function getAffectedRows(): int;
 
   /**
    * Check if a record exists in a table based on properties
-   * 
+   *
    * @param   string  $tblName      Table name
    * @param   array   $properties   Column=>value pairs to match
    * @param   string  $selectField  Field to select
@@ -187,7 +183,7 @@ interface DatabaseInterface
 
   /**
    * Quote a string value for SQL usage
-   * 
+   *
    * @param   string  $text    String to quote
    * @param   bool    $escape  If true, escape the string first
    * @return  string  Quoted string
@@ -196,7 +192,7 @@ interface DatabaseInterface
 
   /**
    * Quote an array of values for SQL IN clause
-   * 
+   *
    * @param   array   $values  Array of values
    * @return  string  Comma-separated quoted values
    */
@@ -204,7 +200,7 @@ interface DatabaseInterface
 
   /**
    * Quote a database object name (table, column, etc.)
-   * 
+   *
    * @param   string       $name  Name to quote
    * @param   string|null  $as    Optional alias
    * @return  string  Quoted name
@@ -215,21 +211,21 @@ interface DatabaseInterface
 
   /**
    * Get the database server version
-   * 
+   *
    * @return  string  Version string
    */
   public function getVersion(): string;
 
   /**
    * Get the database collation
-   * 
+   *
    * @return  string|null  Collation name
    */
   public function getCollation(): string|null;
 
   /**
    * Get the current database name
-   * 
+   *
    * @return  string  Database name
    */
   public function getDatabaseName(): string;
@@ -238,14 +234,14 @@ interface DatabaseInterface
 
   /**
    * Get list of all tables in the database
-   * 
+   *
    * @return  array  Array of table names
    */
   public function getTableList(): array;
 
   /**
    * Get column information for a table
-   * 
+   *
    * @param   string  $table  Table name
    * @param   bool    $full   If true, return full column information
    * @return  array   Associative array of column information
@@ -254,7 +250,7 @@ interface DatabaseInterface
 
   /**
    * Get key/index information for a table
-   * 
+   *
    * @param   string  $table  Table name
    * @return  array   Array of key information
    */
@@ -262,7 +258,7 @@ interface DatabaseInterface
 
   /**
    * Get CREATE TABLE statements for tables
-   * 
+   *
    * @param   array  $tables  Array of table names
    * @return  array  Associative array of table => CREATE statement
    */
@@ -270,7 +266,7 @@ interface DatabaseInterface
 
   /**
    * Check if a table exists in the database
-   * 
+   *
    * @param   string  $table  Table name
    * @return  bool    True if table exists
    */
@@ -278,14 +274,14 @@ interface DatabaseInterface
 
   /**
    * Drop a table from the database
-   * 
+   *
    * @param   string  $table  Table name
    */
   public function dropTable(string $table): void;
 
   /**
    * Rename a table
-   * 
+   *
    * @param   string  $oldTable  Current table name
    * @param   string  $newTable  New table name
    */
@@ -293,7 +289,7 @@ interface DatabaseInterface
 
   /**
    * Truncate a table (remove all rows)
-   * 
+   *
    * @param   string  $table  Table name
    */
   public function truncateTable(string $table): void;
@@ -317,14 +313,14 @@ interface DatabaseInterface
 
   /**
    * Get the current timestamp SQL function
-   * 
+   *
    * @return string The SQL function name for current timestamp
    */
   public function currentTimestamp(): string;
 
   /**
    * Get the character length SQL function
-   * 
+   *
    * @param string $field The field or expression to measure
    * @return string The SQL function call for character length
    */
@@ -332,7 +328,7 @@ interface DatabaseInterface
 
   /**
    * Concatenate multiple values into a single string
-   * 
+   *
    * @param array $values Array of values to concatenate
    * @param string $separator Optional separator between values
    * @return string The SQL function call for concatenation

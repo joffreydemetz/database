@@ -7,11 +7,12 @@
 
 namespace JDZ\Database\Query;
 
+use JDZ\Database\Contract\QueryInterface;
 use JDZ\Database\Parameter;
 
 /**
  * Base abstract Query class
- * 
+ *
  * Provides common functionality for all query types:
  * - Parameter binding
  * - Limit/offset handling

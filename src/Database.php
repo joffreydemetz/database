@@ -9,11 +9,11 @@ namespace JDZ\Database;
 
 use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Exception\ExecutionFailureException;
-use JDZ\Database\DatabaseInterface;
-use JDZ\Database\ConnectionInterface;
-use JDZ\Database\StatementInterface;
+use JDZ\Database\Contract\DatabaseInterface;
+use JDZ\Database\Contract\ConnectionInterface;
+use JDZ\Database\Contract\StatementInterface;
+use JDZ\Database\Contract\QueryInterface;
 use JDZ\Database\FetchMode;
-use JDZ\Database\Query\QueryInterface;
 use JDZ\Database\Query\Query;
 use JDZ\Database\Query\StringQuery;
 use JDZ\Database\Query\SelectQuery;

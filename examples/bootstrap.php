@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../bootstrap.php';
 
-use JDZ\Database\DatabaseInterface;
+use JDZ\Database\Contract\DatabaseInterface;
 
 /**
  * Cleanup database tables after example execution

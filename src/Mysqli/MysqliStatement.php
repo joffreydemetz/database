@@ -11,7 +11,7 @@ use JDZ\Database\Exception\ExecutionFailureException;
 use JDZ\Database\Exception\PrepareStatementFailureException;
 use JDZ\Database\FetchMode;
 use JDZ\Database\ParamType;
-use JDZ\Database\StatementInterface;
+use JDZ\Database\Contract\StatementInterface;
 
 class MysqliStatement implements StatementInterface
 {

@@ -7,7 +7,7 @@
 
 namespace JDZ\Database;
 
-use JDZ\Database\DatabaseInterface;
+use JDZ\Database\Contract\DatabaseInterface;
 use JDZ\Database\Pdo\PdoDatabase;
 use JDZ\Database\Pdo\PdoPostgresqlDatabase;
 use JDZ\Database\Pdo\PdoSqliteDatabase;
