@@ -5,25 +5,25 @@
  * @license   MIT License; <https://opensource.org/licenses/MIT>
  */
 
-namespace JDZ\Database\Query;
+namespace JDZ\Database\Contract;
 
 /**
  * Query Interface
- * 
+ *
  * Defines the contract for query objects
  */
 interface QueryInterface
 {
     /**
      * Convert the query to a SQL string
-     * 
+     *
      * @return string The SQL query string
      */
     public function toString(): string;
 
     /**
      * Bind a parameter to the query
-     * 
+     *
      * @param string|int $key Parameter key
      * @param mixed $value Parameter value
      * @param string|int $dataType Data type
@@ -35,7 +35,7 @@ interface QueryInterface
 
     /**
      * Bind a value to the query
-     * 
+     *
      * @param string|int $key Parameter key
      * @param mixed $value Parameter value
      * @param string|int $dataType Data type
@@ -45,7 +45,7 @@ interface QueryInterface
 
     /**
      * Unbind one or more parameters
-     * 
+     *
      * @param string|int|array $key Parameter key(s) to unbind
      * @return static
      */
@@ -53,7 +53,7 @@ interface QueryInterface
 
     /**
      * Bind an array of values
-     * 
+     *
      * @param array $data Associative array of key-value pairs
      * @param string $dataType Data type for all values
      * @return static
@@ -62,7 +62,7 @@ interface QueryInterface
 
     /**
      * Get all bound parameters
-     * 
+     *
      * @return array Array of Parameter objects
      */
     public function getBounded(): array;
