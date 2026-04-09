@@ -15,7 +15,16 @@ class MysqliDatabaseTest extends TestCase
             $this->markTestSkipped('MySQLi extension not available');
         }
 
-        $this->db = new MysqliDatabase($this->getMysqlOptions());
+        $options = $this->getMysqlOptions();
+
+        try {
+            $this->db = new MysqliDatabase($options);
+            $this->db->connect();
+            $this->db->disconnect();
+            $this->db = new MysqliDatabase($options);
+        } catch (\Exception $e) {
+            $this->markTestSkipped('MySQL server not available: ' . $e->getMessage());
+        }
     }
 
     protected function tearDown(): void

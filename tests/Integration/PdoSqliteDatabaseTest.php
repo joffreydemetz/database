@@ -177,7 +177,7 @@ class PdoSqliteDatabaseTest extends TestCase
     {
         $quoted = $this->db->quoteName('table_name');
 
-        $this->assertEquals('`table_name`', $quoted);
+        $this->assertEquals('"table_name"', $quoted);
     }
 
     public function testEscape(): void

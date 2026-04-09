@@ -15,7 +15,16 @@ class PdoDatabaseTest extends TestCase
             $this->markTestSkipped('MySQL PDO driver not available');
         }
 
-        $this->db = new PdoDatabase($this->getMysqlOptions());
+        $options = $this->getMysqlOptions();
+
+        try {
+            $this->db = new PdoDatabase($options);
+            $this->db->connect();
+            $this->db->disconnect();
+            $this->db = new PdoDatabase($options);
+        } catch (\Exception $e) {
+            $this->markTestSkipped('MySQL server not available: ' . $e->getMessage());
+        }
     }
 
     protected function tearDown(): void

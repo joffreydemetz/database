@@ -39,7 +39,7 @@ trait LimitClause
     protected function buildLimitClause(): string
     {
         if ($this->limit > 0 && $this->offset > 0) {
-            return ' LIMIT ' . $this->offset . ', ' . $this->limit;
+            return ' LIMIT ' . $this->limit . ' OFFSET ' . $this->offset;
         } elseif ($this->limit > 0) {
             return ' LIMIT ' . $this->limit;
         }

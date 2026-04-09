@@ -19,6 +19,11 @@ class StringQuery extends Query
 {
     protected string $query = '';
 
+    public function __construct(string $query = '')
+    {
+        $this->query = $query;
+    }
+
     /**
      * Convert the query to a SQL string
      * 

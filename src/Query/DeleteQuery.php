@@ -10,18 +10,22 @@ namespace JDZ\Database\Query;
 use JDZ\Database\Query\Query;
 use JDZ\Database\Query\JoinClause;
 use JDZ\Database\Query\WhereClause;
+use JDZ\Database\Query\OrderClause;
+use JDZ\Database\Query\LimitClause;
 
 /**
  * DELETE Query Builder
- * 
+ *
  * Builds DELETE queries with support for:
  * - DELETE FROM table
  * - JOIN operations (for DELETE with JOIN)
  * - WHERE conditions
+ * - ORDER BY
+ * - LIMIT
  */
 class DeleteQuery extends Query
 {
-    use WhereClause, JoinClause;
+    use WhereClause, JoinClause, OrderClause, LimitClause;
 
     protected array $from = [];
 
@@ -38,6 +42,8 @@ class DeleteQuery extends Query
 
         $query .= $this->buildJoinClause();
         $query .= $this->buildWhereClause();
+        $query .= $this->buildOrderClause();
+        $query .= $this->buildLimitClause();
 
         return $query;
     }

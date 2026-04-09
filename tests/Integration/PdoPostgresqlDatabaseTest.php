@@ -15,7 +15,16 @@ class PdoPostgresqlDatabaseTest extends TestCase
             $this->markTestSkipped('PostgreSQL PDO driver not available');
         }
 
-        $this->db = new PdoPostgresqlDatabase($this->getPostgresqlOptions());
+        $options = $this->getPostgresqlOptions();
+
+        try {
+            $this->db = new PdoPostgresqlDatabase($options);
+            $this->db->connect();
+            $this->db->disconnect();
+            $this->db = new PdoPostgresqlDatabase($options);
+        } catch (\Exception $e) {
+            $this->markTestSkipped('PostgreSQL server not available: ' . $e->getMessage());
+        }
     }
 
     protected function tearDown(): void

@@ -245,6 +245,8 @@ class DeleteQueryTest extends TestCase
         $query->delete('logs l')
             ->innerJoin('users u ON u.id = l.user_id')
             ->where(['l.level = :level', 'l.created_at < :date', 'u.deleted_at IS NOT NULL'])
+            ->order('l.created_at ASC')
+            ->setLimit(1000)
             ->bindValue(':level', 'debug')
             ->bindValue(':date', '2020-01-01');
 
@@ -277,6 +279,8 @@ class DeleteQueryTest extends TestCase
         $query = new DeleteQuery();
         $query->delete('sessions')
             ->where('last_activity < :timestamp')
+            ->order('last_activity ASC')
+            ->setLimit(10000)
             ->bindValue(':timestamp', time() - 86400);
 
         $sql = $query->toString();

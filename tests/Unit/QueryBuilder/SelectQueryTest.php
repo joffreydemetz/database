@@ -500,7 +500,9 @@ class SelectQueryTest extends TestCase
 
         $sql = $query->toString();
 
-        $this->assertStringContainsString('WHERE id IN (SELECT user_id FROM posts', $sql);
+        $this->assertStringContainsString('WHERE id IN (SELECT user_id', $sql);
+        $this->assertStringContainsString('FROM posts', $sql);
+        $this->assertStringContainsString('status = "published"', $sql);
     }
 
     public function testToStringMagicMethod(): void

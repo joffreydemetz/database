@@ -288,6 +288,8 @@ class UpdateQueryTest extends TestCase
                 'p.last_sync = NOW()'
             ])
             ->where(['u.active = 1', 'p.verified = 1'])
+            ->order('u.name ASC')
+            ->setLimit(50)
             ->bindValue(':name', 'Updated Name');
 
         $sql = $query->toString();

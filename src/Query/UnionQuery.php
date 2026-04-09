@@ -53,7 +53,7 @@ class UnionQuery extends Query
                 $parts[] = (string)$item['query'];
             } else {
                 // Subsequent queries prepend UNION [DISTINCT|ALL]
-                $union = $item['distinct'] ? 'UNION DISTINCT' : 'UNION';
+                $union = $item['distinct'] ? 'UNION' : 'UNION ALL';
                 $parts[] = $union . PHP_EOL . (string)$item['query'];
             }
         }
@@ -79,9 +79,15 @@ class UnionQuery extends Query
     public function addQuery(SelectQuery|StringQuery|string $query, bool $distinct = false): static
     {
         $this->queries[] = [
-            'query' => trim((string)$query),
+            'query' => preg_replace('/\s*\R\s*/', ' ', trim((string)$query)),
             'distinct' => $distinct
         ];
+
+        if ($query instanceof Query) {
+            foreach ($query->getBounded() as $key => $param) {
+                $this->bounded[$key] = $param;
+            }
+        }
 
         return $this;
     }

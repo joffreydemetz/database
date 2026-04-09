@@ -10,19 +10,23 @@ namespace JDZ\Database\Query;
 use JDZ\Database\Query\Query;
 use JDZ\Database\Query\JoinClause;
 use JDZ\Database\Query\WhereClause;
+use JDZ\Database\Query\OrderClause;
+use JDZ\Database\Query\LimitClause;
 
 /**
  * UPDATE Query Builder
- * 
+ *
  * Builds UPDATE queries with support for:
  * - UPDATE table
  * - SET assignments
  * - JOIN operations (for UPDATE with JOIN)
  * - WHERE conditions
+ * - ORDER BY
+ * - LIMIT
  */
 class UpdateQuery extends Query
 {
-    use WhereClause, JoinClause;
+    use WhereClause, JoinClause, OrderClause, LimitClause;
 
     protected array $tables = [];
     protected bool $ignore = false;
@@ -43,6 +47,8 @@ class UpdateQuery extends Query
         }
 
         $query .= $this->buildWhereClause();
+        $query .= $this->buildOrderClause();
+        $query .= $this->buildLimitClause();
 
         return $query;
     }
