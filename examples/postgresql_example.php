@@ -17,10 +17,8 @@ if (!DatabaseFactory::isDriverAvailable('pgsql')) {
     exit(1);
 }
 
-echo "NOTE: This example requires a PostgreSQL server.\n";
-echo "You can either:\n";
-echo "  1. Start the Docker container: docker compose up -d postgres\n";
-echo "  2. Use a local PostgreSQL installation\n\n";
+echo "NOTE: This example requires a reachable PostgreSQL server\n";
+echo "      with the credentials configured below (or in config.php).\n\n";
 
 // Try to connect to PostgreSQL
 try {

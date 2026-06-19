@@ -50,20 +50,7 @@
     },
     "scripts": {
         "phpunit": "phpunit --colors=always",
-        "docker-up": "docker compose up -d",
-        "docker-down": "docker compose down",
-        "docker-wait": "@php -r \"echo 'Waiting for databases to be ready...' . PHP_EOL; sleep(15); echo 'Ready!' . PHP_EOL;\"",
-        "test": [
-            "@docker-up",
-            "@docker-wait",
-            "@phpunit",
-            "@docker-down"
-        ],
-        "examples": [
-            "@docker-up",
-            "@docker-wait",
-            "php examples/run.php",
-            "@docker-down"
-        ]
+        "test": "@phpunit",
+        "examples": "php examples/run.php"
     }
 }

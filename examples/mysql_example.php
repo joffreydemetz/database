@@ -18,10 +18,8 @@ if (!DatabaseFactory::isDriverAvailable('mysql')) {
     exit(1);
 }
 
-echo "NOTE: This example requires a MySQL server.\n";
-echo "You can either:\n";
-echo "  1. Start the Docker container: docker compose up -d mysql\n";
-echo "  2. Use a local MySQL installation\n";
+echo "NOTE: This example requires a reachable MySQL server\n";
+echo "      with the credentials configured below (or in config.php).\n";
 echo "\n";
 
 // Try to connect to MySQL

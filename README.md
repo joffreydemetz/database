@@ -210,10 +210,10 @@ The `examples/` directory contains comprehensive, runnable examples demonstratin
 ### Run examples
 
 ```bash
-# Run all examples inside a Docker containers
+# Run all examples (requires the configured databases to be reachable)
 composer examples
 
-# Or run directly (if databases are already set up)
+# Or run directly
 php examples/run.php
 
 # Run individual examples
@@ -229,7 +229,7 @@ php examples/sqlite_example.php
 - All examples use `#__` table prefix (replaced with `app_` by default)
 - Examples automatically clean up created tables
 - SQLite files are created in examples/ directory
-- Docker Compose available for test databases
+- SQLite examples run out of the box; MySQL/PostgreSQL examples need a reachable server with the credentials in `config.php`
 
 ## Testing
 
@@ -238,12 +238,11 @@ The library includes a comprehensive test suite with 200+ unit and integration t
 ### Running Tests
 
 ```bash
-# Run all tests with Docker containers
+# Run the full test suite
 composer test
-
-# Or run directly (if databases are already set up)
+# Or
 composer phpunit
-# Or 
+# Or
 vendor/bin/phpunit --colors=always
 
 # Run unit tests only (fast, no database needed)
@@ -257,7 +256,7 @@ vendor/bin/phpunit tests/Unit/DatabaseFactoryTest.php
 vendor/bin/phpunit tests/Integration/PdoSqliteDatabaseTest.php
 ```
 
-Tests automatically start/stop Docker containers for MySQL and PostgreSQL, ensuring consistent test environments.
+Unit tests and the SQLite integration tests run with no setup. MySQL and PostgreSQL integration tests are skipped automatically unless a server with the configured credentials is reachable.
 
 ### Test Coverage
 
