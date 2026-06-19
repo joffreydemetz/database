@@ -69,6 +69,17 @@ echo "Created from PostgreSQL DSN\n";
 $db = DatabaseFactory::createFromDsn('sqlite://:memory:');
 echo "Created from SQLite DSN (in-memory)\n\n";
 
+echo "=== Config-driven DSN ===\n\n";
+
+// When config.php sets a 'dsn' string, getDatabaseConfig() returns it directly
+// and create() understands the 'dsn' key natively. This is the simplest setup:
+//   'database' => ['dsn' => 'sqlite:///:memory:', 'prefix' => 'app_']
+$db = DatabaseFactory::create([
+    'dsn'       => 'sqlite:///:memory:',
+    'tblprefix' => 'app_',
+]);
+echo "Created from DSN config key\n\n";
+
 echo "=== Multiple Database Connections ===\n\n";
 
 // Using SQLite for demonstration (no server required)

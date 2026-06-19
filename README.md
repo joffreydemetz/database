@@ -33,7 +33,53 @@ The library includes methods to detect which drivers are available on your syste
 
 ## Configuration Options
 
+### DSN String (recommended)
+
+Instead of spelling out every connection field, pass a single Doctrine-style DSN
+string via the `dsn` key (or `DatabaseFactory::createFromDsn()`):
+
+```php
+use JDZ\Database\DatabaseFactory;
+
+// Inline via create()
+$db = DatabaseFactory::create([
+    'dsn'       => 'mysql://user:password@localhost:3306/mydb?charset=utf8mb4',
+    'tblprefix' => 'app_',
+]);
+
+// Or the dedicated helper
+$db = DatabaseFactory::createFromDsn('pgsql://user:password@localhost:5432/mydb');
+```
+
+**DSN format:** `driver://user:pass@host:port/dbname?charset=...&socket=...`
+
+Supported schemes (and aliases):
+
+| Scheme(s) | Resolves to |
+|---|---|
+| `mysql`, `pdo-mysql`, `pdo_mysql`, `mysql2` | MySQL (PDO) |
+| `mysqli`, `mariadb` | MySQL/MariaDB (native MySQLi) |
+| `pgsql`, `pdo-pgsql`, `postgresql`, `postgres` | PostgreSQL (PDO) |
+| `sqlite`, `sqlite3`, `pdo-sqlite` | SQLite (PDO) |
+
+```text
+mysql://root:secret@localhost:3306/app?charset=utf8mb4
+pgsql://user:secret@db.example.com:5432/app
+sqlite:///var/data/app.sqlite     # absolute file path
+sqlite:///:memory:                # in-memory database
+```
+
+Notes:
+- Explicit options passed alongside a DSN **override** the parsed values.
+- Credentials are URL-decoded — percent-encode reserved characters in passwords
+  (e.g. `p@ss` → `p%40ss`).
+- Query-string parameters (`?charset=...`, `?socket=...`) are merged into the config.
+
+In `config.php`, setting `database.dsn` makes it win over the per-driver blocks;
+leave it empty to fall back to the explicit `driver` + nested config.
+
 ### Common Options
+- **dsn** - Doctrine-style DSN string (see above); when set it supplies the other options
 - **driver** - Database type: mysql, mysqli, pgsql, sqlite, mariadb
 - **tblprefix** - Table prefix for `#__` replacement (default: empty string)
 - **driverOptions** - PDO-specific options array

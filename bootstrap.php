@@ -55,8 +55,20 @@ function config(string $path, mixed $default = null): mixed
  */
 function getDatabaseConfig(?string $driver = null): array
 {
-    $driver = $driver ?? config('database.driver', 'sqlite');
     $prefix = config('database.prefix', '');
+    $dsn    = config('database.dsn', '');
+
+    // A DSN string takes precedence over the per-driver blocks. The 'dsn' key is
+    // understood natively by DatabaseFactory::create(). Skip when an explicit
+    // driver is requested (e.g. getDatabaseConfig('mysql')).
+    if ($driver === null && $dsn !== '') {
+        return [
+            'dsn'       => $dsn,
+            'tblprefix' => $prefix,
+        ];
+    }
+
+    $driver = $driver ?? config('database.driver', 'sqlite');
 
     return match ($driver) {
         'sqlite' => [

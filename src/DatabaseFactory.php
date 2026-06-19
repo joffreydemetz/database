@@ -48,6 +48,14 @@ class DatabaseFactory
      */
     public static function create(array $options): DatabaseInterface
     {
+        // Allow a DSN string as a first-class config parameter.
+        // Explicit options override values parsed from the DSN.
+        if (!empty($options['dsn'])) {
+            $parsed = static::parseDsn($options['dsn']);
+            unset($options['dsn']);
+            $options = array_merge($parsed, $options);
+        }
+
         if (empty($options['driver'])) {
             throw new DatabaseException('Database driver not specified in options');
         }
@@ -92,12 +100,8 @@ class DatabaseFactory
      */
     public static function createFromDsn(string $dsn, array $options = []): DatabaseInterface
     {
-        $parsed = static::parseDsn($dsn);
-
-        // Merge parsed DSN with additional options
-        $config = array_merge($parsed, $options);
-
-        return static::create($config);
+        // Thin wrapper around create(); explicit $options still override the DSN.
+        return static::create(array_merge($options, ['dsn' => $dsn]));
     }
 
     /**
@@ -189,18 +193,36 @@ class DatabaseFactory
 
     /**
      * Parse a DSN string into configuration array
-     * 
+     *
+     * Doctrine-style DSN: driver://user:pass@host:port/dbname?charset=utf8mb4
+     * Supported driver schemes (and aliases):
+     * - mysql, pdo-mysql, pdo_mysql, mysql2  -> mysql
+     * - pgsql, pdo-pgsql, postgresql, postgres -> pgsql
+     * - mysqli, mariadb (native driver, kept as-is)
+     * - sqlite, sqlite3, pdo-sqlite          -> sqlite
+     *
+     * Credentials may be percent-encoded (e.g. p%40ss for "p@ss"); they are
+     * URL-decoded here, matching Doctrine's behaviour.
+     *
      * @param   string  $dsn  DSN string
      * @return  array   Configuration array
      * @throws  DatabaseException  If DSN format is invalid
      */
-    protected static function parseDsn(string $dsn): array
+    public static function parseDsn(string $dsn): array
     {
-        // Handle SQLite special cases
-        if (preg_match('#^sqlite://(.+)$#', $dsn, $matches)) {
+        // Handle SQLite (file path / :memory:) — parse_url is unreliable for these.
+        // Covers sqlite://, sqlite:///, sqlite3://, pdo-sqlite://, pdo_sqlite://
+        if (preg_match('#^(?:pdo[-_])?sqlite[0-9]?://(.+)$#i', $dsn, $matches)) {
+            $dbname = $matches[1];
+
+            // Normalize the various in-memory spellings.
+            if ($dbname === ':memory:' || $dbname === '/:memory:') {
+                $dbname = ':memory:';
+            }
+
             return [
                 'driver' => 'sqlite',
-                'dbname' => $matches[1],
+                'dbname' => $dbname,
                 'host'   => '',
                 'user'   => '',
                 'pass'   => '',
@@ -214,10 +236,10 @@ class DatabaseFactory
         }
 
         $config = [
-            'driver' => $parts['scheme'],
+            'driver' => static::normalizeDriver($parts['scheme']),
             'host'   => $parts['host'] ?? 'localhost',
-            'user'   => $parts['user'] ?? '',
-            'pass'   => $parts['pass'] ?? '',
+            'user'   => isset($parts['user']) ? rawurldecode($parts['user']) : '',
+            'pass'   => isset($parts['pass']) ? rawurldecode($parts['pass']) : '',
             'dbname' => isset($parts['path']) ? ltrim($parts['path'], '/') : '',
         ];
 
@@ -236,5 +258,17 @@ class DatabaseFactory
         }
 
         return $config;
+    }
+
+    /**
+     * Normalize a DSN driver scheme to a canonical driver name.
+     */
+    protected static function normalizeDriver(string $scheme): string
+    {
+        return match (strtolower($scheme)) {
+            'pdo-mysql', 'pdo_mysql', 'mysql2' => 'mysql',
+            'pdo-pgsql', 'pdo_pgsql', 'postgresql', 'postgres' => 'pgsql',
+            default => strtolower($scheme),
+        };
     }
 }

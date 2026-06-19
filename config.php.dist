@@ -8,6 +8,12 @@
 
 return [
     'database' => [
+        // Simplest: a single Doctrine-style DSN string. If set, it wins over
+        // the per-driver blocks below.
+        // 'dsn' => 'mysql://root:password@localhost:3306/test_db?charset=utf8mb4',
+        // 'dsn' => 'sqlite:///' . __DIR__ . '/examples/database.sqlite',
+
+        // Fallback (used only when 'dsn' is empty):
         // Default driver: 'sqlite', 'mysql', 'pgsql', 'mariadb'
         'driver' => 'sqlite',
 

@@ -120,6 +120,50 @@ class DatabaseFactoryTest extends TestCase
         $this->assertInstanceOf(MysqliDatabase::class, $db);
     }
 
+    public function testCreateWithDsnKey(): void
+    {
+        if (!$this->isSqliteAvailable()) {
+            $this->markTestSkipped('SQLite PDO driver not available');
+        }
+
+        $db = DatabaseFactory::create([
+            'dsn'       => 'sqlite:///:memory:',
+            'tblprefix' => 'app_',
+        ]);
+
+        $this->assertInstanceOf(PdoSqliteDatabase::class, $db);
+    }
+
+    public function testParseDsnUrlDecodesCredentials(): void
+    {
+        $config = DatabaseFactory::parseDsn('mysql://user:p%40ss@localhost/testdb');
+
+        $this->assertSame('user', $config['user']);
+        $this->assertSame('p@ss', $config['pass']);
+    }
+
+    public function testParseDsnDriverAliases(): void
+    {
+        $this->assertSame('mysql', DatabaseFactory::parseDsn('pdo-mysql://root:x@localhost/db')['driver']);
+        $this->assertSame('pgsql', DatabaseFactory::parseDsn('pdo-pgsql://root:x@localhost/db')['driver']);
+        $this->assertSame('pgsql', DatabaseFactory::parseDsn('postgresql://root:x@localhost/db')['driver']);
+    }
+
+    public function testParseDsnSqliteMemoryForms(): void
+    {
+        $this->assertSame(':memory:', DatabaseFactory::parseDsn('sqlite:///:memory:')['dbname']);
+        $this->assertSame(':memory:', DatabaseFactory::parseDsn('sqlite://:memory:')['dbname']);
+        $this->assertSame('/tmp/test.db', DatabaseFactory::parseDsn('sqlite:///tmp/test.db')['dbname']);
+    }
+
+    public function testParseDsnReadsPortAndQuery(): void
+    {
+        $config = DatabaseFactory::parseDsn('mysql://root:x@localhost:3307/db?charset=utf8mb4');
+
+        $this->assertSame(3307, $config['port']);
+        $this->assertSame('utf8mb4', $config['charset']);
+    }
+
     public function testGetAvailableDrivers(): void
     {
         $drivers = DatabaseFactory::getAvailableDrivers();
