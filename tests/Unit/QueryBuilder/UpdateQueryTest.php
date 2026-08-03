@@ -3,6 +3,7 @@
 namespace JDZ\Database\Tests\Unit\QueryBuilder;
 
 use JDZ\Database\Tests\TestCase;
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\UpdateQuery;
 
 /**
@@ -20,6 +21,15 @@ use JDZ\Database\Query\UpdateQuery;
  */
 class UpdateQueryTest extends TestCase
 {
+    // ========================================
+    // CONTRACT TESTS
+    // ========================================
+
+    public function testCarriesTheWhereContract(): void
+    {
+        $this->assertInstanceOf(WhereQueryInterface::class, new UpdateQuery());
+    }
+
     // ========================================
     // BASIC UPDATE TESTS
     // ========================================

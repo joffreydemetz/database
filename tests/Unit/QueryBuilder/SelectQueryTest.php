@@ -3,6 +3,7 @@
 namespace JDZ\Database\Tests\Unit\QueryBuilder;
 
 use JDZ\Database\Tests\TestCase;
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\SelectQuery;
 
 /**
@@ -22,6 +23,15 @@ use JDZ\Database\Query\SelectQuery;
  */
 class SelectQueryTest extends TestCase
 {
+    // ========================================
+    // CONTRACT TESTS
+    // ========================================
+
+    public function testCarriesTheWhereContract(): void
+    {
+        $this->assertInstanceOf(WhereQueryInterface::class, new SelectQuery());
+    }
+
     // ========================================
     // SELECT CLAUSE TESTS
     // ========================================

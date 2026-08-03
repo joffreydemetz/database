@@ -3,6 +3,8 @@
 namespace JDZ\Database\Tests\Unit\QueryBuilder;
 
 use JDZ\Database\Tests\TestCase;
+use JDZ\Database\Contract\QueryInterface;
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\InsertQuery;
 
 /**
@@ -18,6 +20,21 @@ use JDZ\Database\Query\InsertQuery;
  */
 class InsertQueryTest extends TestCase
 {
+    // ========================================
+    // CONTRACT TESTS
+    // ========================================
+
+    /**
+     * An INSERT has no WHERE clause, so it must stay outside that contract
+     */
+    public function testIsAQueryButCarriesNoWhereContract(): void
+    {
+        $query = new InsertQuery();
+
+        $this->assertInstanceOf(QueryInterface::class, $query);
+        $this->assertNotInstanceOf(WhereQueryInterface::class, $query);
+    }
+
     // ========================================
     // BASIC INSERT TESTS
     // ========================================

@@ -3,6 +3,7 @@
 namespace JDZ\Database\Tests\Unit\QueryBuilder;
 
 use JDZ\Database\Tests\TestCase;
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\DeleteQuery;
 
 /**
@@ -18,6 +19,15 @@ use JDZ\Database\Query\DeleteQuery;
  */
 class DeleteQueryTest extends TestCase
 {
+    // ========================================
+    // CONTRACT TESTS
+    // ========================================
+
+    public function testCarriesTheWhereContract(): void
+    {
+        $this->assertInstanceOf(WhereQueryInterface::class, new DeleteQuery());
+    }
+
     // ========================================
     // BASIC DELETE TESTS
     // ========================================

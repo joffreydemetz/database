@@ -3,6 +3,8 @@
 namespace JDZ\Database\Tests\Unit\QueryBuilder;
 
 use JDZ\Database\Tests\TestCase;
+use JDZ\Database\Contract\QueryInterface;
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\StringQuery;
 
 /**
@@ -17,6 +19,30 @@ use JDZ\Database\Query\StringQuery;
  */
 class StringQueryTest extends TestCase
 {
+    // ========================================
+    // CONTRACT TESTS
+    // ========================================
+
+    /**
+     * Raw SQL is handed over whole, so there is nothing to append a WHERE to
+     */
+    public function testIsAQueryButCarriesNoWhereContract(): void
+    {
+        $query = new StringQuery("SELECT * FROM users");
+
+        $this->assertInstanceOf(QueryInterface::class, $query);
+        $this->assertNotInstanceOf(WhereQueryInterface::class, $query);
+    }
+
+    /**
+     * The contract itself guarantees the (string) cast, not just the base class
+     */
+    public function testTheQueryContractIsStringable(): void
+    {
+        $this->assertInstanceOf(\Stringable::class, new StringQuery());
+        $this->assertTrue(\is_a(QueryInterface::class, \Stringable::class, true));
+    }
+
     // ========================================
     // CONSTRUCTOR TESTS
     // ========================================

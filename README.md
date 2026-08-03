@@ -145,6 +145,8 @@ The library uses a factory pattern to create database instances. You can instant
 ### Query Builder Architecture
 Instead of writing raw SQL strings, you can use dedicated query builder classes. Each query type (SELECT, INSERT, UPDATE, DELETE, UNION) has its own builder with methods corresponding to SQL clauses. Builders use method chaining for a fluent interface and maintain type safety through PHP's type system.
 
+Two contracts sit under this. `QueryInterface` is the executable-statement contract — SQL text plus parameter bindings, and `Stringable` — which is exactly what `setQuery()` consumes; every builder satisfies it. `WhereQueryInterface` narrows that to the builders carrying a WHERE clause (`SelectQuery`, `UpdateQuery`, `DeleteQuery`), and is the hint to use for helpers that only append conditions to a statement they were handed. The remaining fluent verbs (`select`, `from`, `join`, `order`, `setLimit`, …) stay class-level on purpose — the contracts describe what a statement *is*, not the whole builder surface.
+
 ### Connection Management
 Database connections are lazy-loaded and managed automatically. The library handles connection state, automatic reconnection on failure, and proper resource cleanup. You can check connection status, manually connect/disconnect, and manage multiple database connections simultaneously.
 

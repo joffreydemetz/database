@@ -3,6 +3,8 @@
 namespace JDZ\Database\Tests\Unit\QueryBuilder;
 
 use JDZ\Database\Tests\TestCase;
+use JDZ\Database\Contract\QueryInterface;
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\UnionQuery;
 use JDZ\Database\Query\SelectQuery;
 use JDZ\Database\Query\StringQuery;
@@ -20,6 +22,21 @@ use JDZ\Database\Query\StringQuery;
  */
 class UnionQueryTest extends TestCase
 {
+    // ========================================
+    // CONTRACT TESTS
+    // ========================================
+
+    /**
+     * A UNION filters through its members, never at the top level
+     */
+    public function testIsAQueryButCarriesNoWhereContract(): void
+    {
+        $query = new UnionQuery();
+
+        $this->assertInstanceOf(QueryInterface::class, $query);
+        $this->assertNotInstanceOf(WhereQueryInterface::class, $query);
+    }
+
     // ========================================
     // BASIC UNION TESTS
     // ========================================
