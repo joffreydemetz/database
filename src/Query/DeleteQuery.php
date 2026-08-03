@@ -7,6 +7,7 @@
 
 namespace JDZ\Database\Query;
 
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\Query;
 use JDZ\Database\Query\JoinClause;
 use JDZ\Database\Query\WhereClause;
@@ -23,7 +24,7 @@ use JDZ\Database\Query\LimitClause;
  * - ORDER BY
  * - LIMIT
  */
-class DeleteQuery extends Query
+class DeleteQuery extends Query implements WhereQueryInterface
 {
     use WhereClause, JoinClause, OrderClause, LimitClause;
 

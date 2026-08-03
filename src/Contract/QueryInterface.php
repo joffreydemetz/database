@@ -12,7 +12,7 @@ namespace JDZ\Database\Contract;
  *
  * Defines the contract for query objects
  */
-interface QueryInterface
+interface QueryInterface extends \Stringable
 {
     /**
      * Convert the query to a SQL string

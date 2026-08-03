@@ -7,6 +7,7 @@
 
 namespace JDZ\Database\Query;
 
+use JDZ\Database\Contract\WhereQueryInterface;
 use JDZ\Database\Query\Query;
 use JDZ\Database\Query\JoinClause;
 use JDZ\Database\Query\WhereClause;
@@ -27,7 +28,7 @@ use JDZ\Database\Query\LimitClause;
  * - UNION operations
  * - LIMIT/OFFSET
  */
-class SelectQuery extends Query
+class SelectQuery extends Query implements WhereQueryInterface
 {
     use WhereClause, JoinClause, OrderClause, LimitClause;
 
