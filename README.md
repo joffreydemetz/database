@@ -49,6 +49,10 @@ $db = DatabaseFactory::create([
 
 // Or the dedicated helper
 $db = DatabaseFactory::createFromDsn('pgsql://user:password@localhost:5432/mydb');
+
+// Or as a named constructor on a concrete driver class (returns that class,
+// so it also works on your own driver subclasses)
+$db = PdoDatabase::createFromDsn('mysql://user:password@localhost:3306/mydb', ['tblprefix' => 'app_']);
 ```
 
 **DSN format:** `driver://user:pass@host:port/dbname?charset=...&socket=...`
@@ -291,7 +295,7 @@ Unit tests and the SQLite integration tests run with no setup. MySQL and Postgre
 - Parameter binding (named parameters, type hints)  
 - Table operations (create, drop, truncate, rename, exists)  
 - Table introspection (columns, metadata)  
-- Quote/escape functions  
+- Quote/escape functions (`quote()`, `quoteName()`, `escape()` + the `q()`, `qn()`, `e()` shortcuts)  
 
 **Driver-Specific Features**
 - **MySQL PDO**: Profiling, collation, standard operations  

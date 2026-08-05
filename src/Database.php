@@ -41,6 +41,23 @@ abstract class Database implements DatabaseInterface
   protected int $errorNum = 0;
   protected string $errorMsg;
 
+  /**
+   * Named constructor: build this driver from a Doctrine-style DSN string.
+   * Explicit $options override values parsed from the DSN.
+   * Call on a concrete driver class (or a subclass facade) — returns static.
+   */
+  public static function createFromDsn(string $dsn, array $options = []): static
+  {
+    $config = array_merge(DatabaseFactory::parseDsn($dsn), $options);
+    $config['tblprefix'] = $config['tblprefix'] ?? '';
+
+    if (empty($config['charset'])) {
+      $config['charset'] = \in_array($config['driver'] ?? '', ['mysql', 'mysqli', 'mariadb']) ? 'utf8mb4' : 'utf8';
+    }
+
+    return new static($config);
+  }
+
   public function __construct(array $options)
   {
     $this->tablePrefix = $options['tblprefix'];
@@ -479,6 +496,30 @@ abstract class Database implements DatabaseInterface
     }
 
     return implode('.', $parts);
+  }
+
+  /**
+   * Shorthand for escape()
+   */
+  public function e(string $text, bool $extra = false): string
+  {
+    return $this->escape($text, $extra);
+  }
+
+  /**
+   * Shorthand for quote()
+   */
+  public function q(string $text, bool $escape = true): string
+  {
+    return $this->quote($text, $escape);
+  }
+
+  /**
+   * Shorthand for quoteName()
+   */
+  public function qn(string $name, string|null $as = null): string
+  {
+    return $this->quoteName($name, $as);
   }
 
   /******************************* 
