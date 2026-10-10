@@ -23,7 +23,7 @@ class PdoDatabaseTest extends TestCase
             $this->db->disconnect();
             $this->db = new PdoDatabase($options);
         } catch (\Exception $e) {
-            $this->markTestSkipped('MySQL server not available: ' . $e->getMessage());
+            $this->markTestSkipped('MySQL server not available (set JDZ_MYSQL_HOST/PORT/DATABASE/USERNAME/PASSWORD): ' . $e->getMessage());
         }
     }
 

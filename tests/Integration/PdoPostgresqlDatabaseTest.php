@@ -23,7 +23,7 @@ class PdoPostgresqlDatabaseTest extends TestCase
             $this->db->disconnect();
             $this->db = new PdoPostgresqlDatabase($options);
         } catch (\Exception $e) {
-            $this->markTestSkipped('PostgreSQL server not available: ' . $e->getMessage());
+            $this->markTestSkipped('PostgreSQL server not available (set JDZ_PGSQL_HOST/PORT/DATABASE/USERNAME/PASSWORD): ' . $e->getMessage());
         }
     }
 

@@ -23,7 +23,7 @@ class MysqliDatabaseTest extends TestCase
             $this->db->disconnect();
             $this->db = new MysqliDatabase($options);
         } catch (\Exception $e) {
-            $this->markTestSkipped('MySQL server not available: ' . $e->getMessage());
+            $this->markTestSkipped('MySQL server not available (set JDZ_MYSQL_HOST/PORT/DATABASE/USERNAME/PASSWORD): ' . $e->getMessage());
         }
     }
 
@@ -206,9 +206,9 @@ class MysqliDatabaseTest extends TestCase
         $userId = $this->db->insertid();
 
         $this->db->setQuery("UPDATE test_users SET age = 30 WHERE id = {$userId}");
-        $affected = $this->db->execute();
+        $this->db->execute();
 
-        $this->assertEquals(1, $affected);
+        $this->assertSame(1, $this->db->getAffectedRows());
 
         $this->db->setQuery("SELECT age FROM test_users WHERE id = {$userId}");
         $age = $this->db->loadResult();
@@ -229,9 +229,9 @@ class MysqliDatabaseTest extends TestCase
         $this->db->execute();
 
         $this->db->setQuery("DELETE FROM test_users WHERE age = 25");
-        $affected = $this->db->execute();
+        $this->db->execute();
 
-        $this->assertEquals(1, $affected);
+        $this->assertSame(1, $this->db->getAffectedRows());
 
         $this->db->setQuery("SELECT COUNT(*) FROM test_users");
         $count = $this->db->loadResult();

@@ -7,17 +7,32 @@ use PHPUnit\Framework\TestCase as BaseTestCase;
 abstract class TestCase extends BaseTestCase
 {
     /**
+     * The integration tests' connection settings come from the environment
+     * (JDZ_MYSQL_*, JDZ_PGSQL_*, JDZ_SQLITE_PATH); the defaults below match a
+     * local MySQL with a test_jdz_database schema and root/root.
+     *
+     * getenv() returns false, not null, for an unset variable, so `?? default`
+     * never falls back. An intentionally empty value (no password) stays empty.
+     */
+    protected function env(string $name, string $default): string
+    {
+        $value = getenv($name);
+
+        return false === $value ? $default : $value;
+    }
+
+    /**
      * Get MySQL connection options for testing
      */
     protected function getMysqlOptions(): array
     {
         return [
             'driver'    => 'mysql',
-            'host'      => getenv('JDZ_MYSQL_HOST') ?? 'localhost',
-            'port'      => (int)(getenv('JDZ_MYSQL_PORT') ?? 3306),
-            'dbname'    => getenv('JDZ_MYSQL_DATABASE') ?? 'test_jdz_database',
-            'user'      => getenv('JDZ_MYSQL_USERNAME') ?? 'root',
-            'pass'      => getenv('JDZ_MYSQL_PASSWORD') ?? 'password',
+            'host'      => $this->env('JDZ_MYSQL_HOST', '127.0.0.1'),
+            'port'      => (int)$this->env('JDZ_MYSQL_PORT', '3306'),
+            'dbname'    => $this->env('JDZ_MYSQL_DATABASE', 'test_jdz_database'),
+            'user'      => $this->env('JDZ_MYSQL_USERNAME', 'root'),
+            'pass'      => $this->env('JDZ_MYSQL_PASSWORD', 'root'),
             'charset'   => 'utf8mb4',
             'tblprefix' => 'test_'
         ];
@@ -30,11 +45,11 @@ abstract class TestCase extends BaseTestCase
     {
         return [
             'driver'    => 'pgsql',
-            'host'      => getenv('JDZ_PGSQL_HOST') ?? 'localhost',
-            'port'      => (int)(getenv('JDZ_PGSQL_PORT') ?? 5432),
-            'dbname'    => getenv('JDZ_PGSQL_DATABASE') ?? 'test_jdz_database',
-            'user'      => getenv('JDZ_PGSQL_USERNAME') ?? 'postgres',
-            'pass'      => getenv('JDZ_PGSQL_PASSWORD') ?? 'password',
+            'host'      => $this->env('JDZ_PGSQL_HOST', '127.0.0.1'),
+            'port'      => (int)$this->env('JDZ_PGSQL_PORT', '5432'),
+            'dbname'    => $this->env('JDZ_PGSQL_DATABASE', 'test_jdz_database'),
+            'user'      => $this->env('JDZ_PGSQL_USERNAME', 'postgres'),
+            'pass'      => $this->env('JDZ_PGSQL_PASSWORD', 'password'),
             'tblprefix' => 'test_'
         ];
     }
@@ -46,7 +61,7 @@ abstract class TestCase extends BaseTestCase
     {
         return [
             'driver'    => 'sqlite',
-            'dbname'    => getenv('JDZ_SQLITE_PATH') ?? ':memory:',
+            'dbname'    => $this->env('JDZ_SQLITE_PATH', ':memory:'),
             'tblprefix' => 'test_'
         ];
     }
@@ -57,11 +72,11 @@ abstract class TestCase extends BaseTestCase
     protected function getMysqliOptions(): array
     {
         return [
-            'host'      => getenv('JDZ_MYSQL_HOST') ?? 'localhost',
-            'port'      => (int)(getenv('JDZ_MYSQL_PORT') ?? 3306),
-            'dbname'    => getenv('JDZ_MYSQL_DATABASE') ?? 'test_jdz_database',
-            'user'      => getenv('JDZ_MYSQL_USERNAME') ?? 'root',
-            'pass'      => getenv('JDZ_MYSQL_PASSWORD') ?? 'password',
+            'host'      => $this->env('JDZ_MYSQL_HOST', '127.0.0.1'),
+            'port'      => (int)$this->env('JDZ_MYSQL_PORT', '3306'),
+            'dbname'    => $this->env('JDZ_MYSQL_DATABASE', 'test_jdz_database'),
+            'user'      => $this->env('JDZ_MYSQL_USERNAME', 'root'),
+            'pass'      => $this->env('JDZ_MYSQL_PASSWORD', 'root'),
             'charset'   => 'utf8mb4',
             'tblprefix' => 'test_'
         ];
