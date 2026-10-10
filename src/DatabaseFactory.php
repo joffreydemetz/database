@@ -60,7 +60,8 @@ class DatabaseFactory
             throw new DatabaseException('Database driver not specified in options');
         }
 
-        $driver = strtolower($options['driver']);
+        // lower-cased for the drivers too: PdoDatabase builds its PDO DSN from it
+        $options['driver'] = $driver = strtolower($options['driver']);
 
         // Set default charset if not specified
         if (empty($options['charset'])) {
@@ -213,30 +214,41 @@ class DatabaseFactory
         // Handle SQLite (file path / :memory:) — parse_url is unreliable for these.
         // Covers sqlite://, sqlite:///, sqlite3://, pdo-sqlite://, pdo_sqlite://
         if (preg_match('#^(?:pdo[-_])?sqlite[0-9]?://(.+)$#i', $dsn, $matches)) {
-            $dbname = $matches[1];
+            // the query string holds options, as for the other drivers
+            [$dbname, $query] = explode('?', $matches[1], 2) + [1 => ''];
 
             // Normalize the various in-memory spellings.
             if ($dbname === ':memory:' || $dbname === '/:memory:') {
                 $dbname = ':memory:';
             }
 
-            return [
+            $config = [
                 'driver' => 'sqlite',
                 'dbname' => $dbname,
                 'host'   => '',
                 'user'   => '',
                 'pass'   => '',
             ];
+
+            if ('' !== $query) {
+                parse_str($query, $queryParams);
+                $config = array_merge($config, $queryParams);
+            }
+
+            return $config;
         }
 
-        $parts = parse_url($dsn);
+        // parse_url() refuses an underscore in a scheme (pdo_mysql://): parse it with a
+        // hyphen, the driver is read from the scheme as written
+        $scheme = strstr($dsn, '://', true);
+        $parts = parse_url(false !== $scheme ? str_replace('_', '-', $scheme) . substr($dsn, strlen($scheme)) : $dsn);
 
         if ($parts === false || empty($parts['scheme'])) {
             throw new DatabaseException('Invalid DSN format');
         }
 
         $config = [
-            'driver' => static::normalizeDriver($parts['scheme']),
+            'driver' => static::normalizeDriver(false !== $scheme ? $scheme : $parts['scheme']),
             'host'   => $parts['host'] ?? 'localhost',
             'user'   => isset($parts['user']) ? rawurldecode($parts['user']) : '',
             'pass'   => isset($parts['pass']) ? rawurldecode($parts['pass']) : '',

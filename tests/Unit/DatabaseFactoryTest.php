@@ -151,10 +151,12 @@ class DatabaseFactoryTest extends TestCase
             // schemes
             'mysql'                       => ['mysql://root:secret@db.example:3307/app', $mysql],
             'pdo-mysql'                   => ['pdo-mysql://root:secret@db.example:3307/app', $mysql],
+            'pdo_mysql'                   => ['pdo_mysql://root:secret@db.example:3307/app', $mysql],
             'mysql2'                    => ['mysql2://root:secret@db.example:3307/app', $mysql],
             'scheme is case-insensitive'  => ['MySQL://root:secret@db.example:3307/app', $mysql],
             'pgsql'                       => ['pgsql://root:secret@db.example:3307/app', $pgsql],
             'pdo-pgsql'                   => ['pdo-pgsql://root:secret@db.example:3307/app', $pgsql],
+            'pdo_pgsql'                   => ['pdo_pgsql://root:secret@db.example:3307/app', $pgsql],
             'postgresql'                  => ['postgresql://root:secret@db.example:3307/app', $pgsql],
             'postgres'                    => ['postgres://root:secret@db.example:3307/app', $pgsql],
             'mysqli is kept'              => ['mysqli://root:secret@db.example:3307/app', ['driver' => 'mysqli'] + $mysql],
@@ -179,6 +181,8 @@ class DatabaseFactoryTest extends TestCase
             'sqlite://:memory:'           => ['sqlite://:memory:', $sqlite(':memory:')],
             'sqlite:///:memory:'          => ['sqlite:///:memory:', $sqlite(':memory:')],
             'pdo_sqlite:///:memory:'      => ['pdo_sqlite:///:memory:', $sqlite(':memory:')],
+            'sqlite query options'        => ['sqlite:///var/data/app.db?tblprefix=app_', $sqlite('/var/data/app.db') + ['tblprefix' => 'app_']],
+            'sqlite :memory: with a query' => ['sqlite://:memory:?tblprefix=app_', $sqlite(':memory:') + ['tblprefix' => 'app_']],
         ];
     }
 

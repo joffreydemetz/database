@@ -211,4 +211,17 @@ class MysqlConnectionTest extends TestCase
             }
         }
     }
+
+    /**
+     * The driver name used to be lower-cased for routing only: 'MySQL' built the
+     * PDO DSN "MySQL:..." (could not find driver) and skipped the charset.
+     */
+    public function testAnUpperCaseDriverNameConnectsWithItsCharset(): void
+    {
+        $db = DatabaseFactory::create(['driver' => 'MySQL'] + $this->options);
+        $db->setQuery('SELECT @@character_set_client');
+
+        $this->assertSame('utf8mb4', $db->loadResult());
+        $db->disconnect();
+    }
 }
