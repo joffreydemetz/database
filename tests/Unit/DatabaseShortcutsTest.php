@@ -2,50 +2,57 @@
 
 namespace JDZ\Database\Tests\Unit;
 
+use JDZ\Database\Mysqli\MysqliDatabase;
 use JDZ\Database\Pdo\PdoDatabase;
 use JDZ\Database\Pdo\PdoSqliteDatabase;
+use JDZ\Database\Tests\Fixtures\ConfigCapturingDatabase;
 use JDZ\Database\Tests\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 
+/**
+ * Database::createFromDsn(), the named constructor on the driver classes: it
+ * parses the DSN like the factory but builds the class it is called on, and
+ * fills in the charset and table prefix itself. Nothing here connects.
+ */
 class DatabaseShortcutsTest extends TestCase
 {
-    private function makeDb(): PdoSqliteDatabase
+    public function testCreateFromDsnBuildsTheClassItIsCalledOn(): void
     {
-        return new PdoSqliteDatabase([
-            'dbname'    => ':memory:',
-            'tblprefix' => '',
-        ]);
+        // DatabaseFactory would route mysql:// to PdoDatabase
+        $this->assertSame(MysqliDatabase::class, MysqliDatabase::createFromDsn('mysql://root@db.example/app')::class);
+        $this->assertSame(PdoDatabase::class, PdoDatabase::createFromDsn('mysql://root@db.example/app')::class);
+        $this->assertSame(PdoSqliteDatabase::class, PdoSqliteDatabase::createFromDsn('sqlite://:memory:')::class);
     }
 
-    public function testCreateFromDsnReturnsStatic(): void
+    public static function dsnConfigs(): array
     {
-        $db = PdoSqliteDatabase::createFromDsn('sqlite://:memory:');
-
-        $this->assertInstanceOf(PdoSqliteDatabase::class, $db);
-        $this->assertSame('', $db->tablePrefix);
+        return [
+            'mysql defaults to utf8mb4'      => ['mysql://root@db.example/app', [], 'utf8mb4', ''],
+            'a mysql alias too'              => ['mysql2://root@db.example/app', [], 'utf8mb4', ''],
+            'mysqli defaults to utf8mb4'     => ['mysqli://root@db.example/app', [], 'utf8mb4', ''],
+            'mariadb defaults to utf8mb4'    => ['mariadb://root@db.example/app', [], 'utf8mb4', ''],
+            'pgsql defaults to utf8'         => ['postgres://app@db.example/app', [], 'utf8', ''],
+            'sqlite defaults to utf8'        => ['sqlite://:memory:', [], 'utf8', ''],
+            'the DSN query sets the charset' => ['mysql://root@db.example/app?charset=latin1', [], 'latin1', ''],
+            'an empty charset is defaulted'  => ['mysql://root@db.example/app?charset=', [], 'utf8mb4', ''],
+            'the DSN query sets the prefix'  => ['mysql://root@db.example/app?tblprefix=dsn_', [], 'utf8mb4', 'dsn_'],
+            'options override the DSN'       => ['mysql://root@db.example/app?charset=latin1&tblprefix=dsn_', ['charset' => 'ascii', 'tblprefix' => 'opt_'], 'ascii', 'opt_'],
+        ];
     }
 
-    public function testCreateFromDsnOptionsOverrideDsn(): void
+    #[DataProvider('dsnConfigs')]
+    public function testCreateFromDsnFillsTheCharsetAndTablePrefix(string $dsn, array $options, string $charset, string $prefix): void
     {
-        $db = PdoDatabase::createFromDsn('mysql://root:p%40ss@localhost:3306/mydb', [
-            'tblprefix' => 'abc_',
-        ]);
+        $db = ConfigCapturingDatabase::createFromDsn($dsn, $options);
 
-        $this->assertInstanceOf(PdoDatabase::class, $db);
-        $this->assertSame('abc_', $db->tablePrefix);
+        $this->assertSame($charset, $db->received['charset']);
+        $this->assertSame($prefix, $db->tablePrefix);
     }
 
-    public function testCreateFromDsnDefaultsCharset(): void
+    public function testCreateFromDsnOptionsOverrideTheParsedValues(): void
     {
-        $defaulted = PdoDatabase::createFromDsn('mysql://root@localhost/mydb');
-        $explicit  = PdoDatabase::createFromDsn('mysql://root@localhost/mydb?charset=utf8');
+        $db = ConfigCapturingDatabase::createFromDsn('sqlite:///var/data/app.db', ['dbname' => ':memory:']);
 
-        $this->assertSame('utf8mb4', $this->getOptions($defaulted)['charset']);
-        $this->assertSame('utf8', $this->getOptions($explicit)['charset']);
-    }
-
-    private function getOptions(PdoDatabase $db): array
-    {
-        $prop = new \ReflectionProperty($db, 'options');
-        return $prop->getValue($db);
+        $this->assertSame(':memory:', $db->getDatabaseName());
     }
 }

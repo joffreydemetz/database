@@ -2,6 +2,9 @@
 
 namespace JDZ\Database\Tests\Integration;
 
+use JDZ\Database\Exception\DatabaseException;
+use JDZ\Database\Exception\ExecutionFailureException;
+use JDZ\Database\Exception\PrepareStatementFailureException;
 use JDZ\Database\Pdo\PdoSqliteDatabase;
 use JDZ\Database\Tests\TestCase;
 
@@ -159,5 +162,177 @@ class PdoSqliteDatabaseTest extends TestCase
 
         $this->assertIsString($escaped);
         $this->assertStringContainsString("''", $escaped);
+    }
+
+    private function rowCount(string $table = 'test_users'): int
+    {
+        $this->db->setQuery('SELECT COUNT(*) FROM ' . $table);
+
+        return $this->db->loadResult();
+    }
+
+    public function testTransactionRollback(): void
+    {
+        $this->db->setQuery($this->getSqliteTestTableSql('test_users'));
+        $this->db->execute();
+
+        $this->db->transactionStart();
+        $this->db->setQuery("INSERT INTO test_users (name, email) VALUES ('Rollback', 'rb@test.com')");
+        $this->db->execute();
+        $this->db->transactionRollback();
+
+        $this->assertSame(0, $this->rowCount());
+    }
+
+    public function testInsertidIsTheLastGeneratedId(): void
+    {
+        $this->db->setQuery($this->getSqliteTestTableSql('test_users'));
+        $this->db->execute();
+
+        $this->db->setQuery("INSERT INTO test_users (name, email) VALUES ('A', 'a@test.com')");
+        $this->db->execute();
+        $this->assertSame(1, $this->db->insertid());
+
+        $this->db->setQuery("INSERT INTO test_users (name, email) VALUES ('B', 'b@test.com')");
+        $this->db->execute();
+        $this->assertSame(2, $this->db->insertid());
+    }
+
+    public function testGetTableKeys(): void
+    {
+        $this->db->setQuery($this->getSqliteTestTableSql('test_users'));
+        $this->db->execute();
+        $this->db->setQuery('CREATE UNIQUE INDEX idx_users_email ON test_users (email)');
+        $this->db->execute();
+        $this->db->setQuery('CREATE INDEX idx_users_name_age ON test_users (name, age)');
+        $this->db->execute();
+
+        $keys = $this->db->getTableKeys('#__users');
+
+        $this->assertSame(['Key_name' => 'PRIMARY', 'Column_name' => 'id', 'Non_unique' => 0], (array)$keys[0], 'the primary key comes first');
+
+        // the order of the other indexes is SQLite's; their columns keep the index order
+        $byIndex = [];
+        foreach ($keys as $key) {
+            $byIndex[$key->Key_name][] = [$key->Column_name, $key->Non_unique];
+        }
+        ksort($byIndex);
+
+        $this->assertSame([
+            'PRIMARY'            => [['id', 0]],
+            'idx_users_email'    => [['email', 0]],
+            'idx_users_name_age' => [['name', 1], ['age', 1]],
+        ], $byIndex);
+    }
+
+    public function testGetTableColumnsMapsThePragmaToTheMysqlShape(): void
+    {
+        $this->db->setQuery($this->getSqliteTestTableSql('test_users'));
+        $this->db->execute();
+
+        $columns = $this->db->getTableColumns('#__users', true);
+
+        $this->assertSame(['id', 'name', 'email', 'age', 'created_at'], array_keys($columns));
+        $this->assertSame(['Field' => 'name', 'Type' => 'TEXT', 'Null' => 'NO', 'Default' => null, 'Key' => '', 'Extra' => ''], (array)$columns['name']);
+        $this->assertSame(['PRI', 'auto_increment'], [$columns['id']->Key, $columns['id']->Extra], 'an INTEGER primary key');
+        $this->assertSame('YES', $columns['age']->Null);
+        $this->assertObjectNotHasProperty('Extra', $this->db->getTableColumns('#__users')['id'], 'Extra only in the full listing');
+    }
+
+    public function testGetTableCreateReturnsTheStoredSql(): void
+    {
+        $sql = 'CREATE TABLE test_users (id INTEGER PRIMARY KEY, name TEXT)';
+        $this->db->setQuery($sql);
+        $this->db->execute();
+
+        $this->assertSame(['test_users' => $sql], $this->db->getTableCreate(['test_users', 'test_missing']));
+    }
+
+    public function testRenameTable(): void
+    {
+        $this->db->setQuery($this->getSqliteTestTableSql('test_users'));
+        $this->db->execute();
+        $this->db->setQuery("INSERT INTO test_users (name, email) VALUES ('Alice', 'alice@example.com')");
+        $this->db->execute();
+
+        $this->db->renameTable('#__users', '#__people');
+
+        $this->assertSame(['test_people'], $this->db->getTableList());
+        $this->db->setQuery('SELECT name FROM test_people');
+        $this->assertSame('Alice', $this->db->loadResult());
+    }
+
+    public function testRenameTableDoesNothingWithoutASourceOrWithATakenTarget(): void
+    {
+        $this->db->setQuery($this->getSqliteTestTableSql('test_users'));
+        $this->db->execute();
+        $this->db->setQuery($this->getSqliteTestTableSql('test_people'));
+        $this->db->execute();
+
+        $this->db->renameTable('#__missing', '#__other');
+        $this->db->renameTable('#__users', '#__people');
+
+        $this->assertSame(['test_people', 'test_users'], $this->db->getTableList());
+    }
+
+    public function testTruncateTableResetsTheAutoincrementSequence(): void
+    {
+        $this->db->setQuery($this->getSqliteTestTableSql('test_users'));
+        $this->db->execute();
+        $this->db->setQuery("INSERT INTO test_users (name, email) VALUES ('A', 'a@test.com'), ('B', 'b@test.com')");
+        $this->db->execute();
+
+        $this->db->truncateTable('#__users');
+
+        $this->db->setQuery("INSERT INTO test_users (name, email) VALUES ('C', 'c@test.com')");
+        $this->db->execute();
+
+        $this->assertSame(1, $this->db->insertid(), 'ids start over');
+        $this->assertSame(1, $this->rowCount());
+    }
+
+    public function testTruncateTableWithoutAnAutoincrementSequence(): void
+    {
+        // no AUTOINCREMENT table in this database, so no sqlite_sequence to reset
+        $this->db->setQuery('CREATE TABLE test_plain (id INTEGER PRIMARY KEY, name TEXT)');
+        $this->db->execute();
+        $this->db->setQuery("INSERT INTO test_plain (name) VALUES ('A'), ('B')");
+        $this->db->execute();
+
+        $this->db->truncateTable('#__plain');
+        $this->db->truncateTable('#__missing'); // a missing table is skipped
+
+        $this->assertSame(0, $this->rowCount('test_plain'));
+    }
+
+    public function testForeignKeysAreEnforced(): void
+    {
+        // SQLite leaves them off unless the connection turns them on
+        $this->db->setQuery('CREATE TABLE test_parents (id INTEGER PRIMARY KEY)');
+        $this->db->execute();
+        $this->db->setQuery('CREATE TABLE test_children (id INTEGER PRIMARY KEY, id_parent INTEGER NOT NULL REFERENCES test_parents (id))');
+        $this->db->execute();
+        $this->db->setQuery('INSERT INTO test_children (id_parent) VALUES (99)');
+
+        $e = $this->assertThrowsExactly(
+            DatabaseException::class,
+            'SQLSTATE[23000]: Integrity constraint violation: 19 FOREIGN KEY constraint failed',
+            fn() => $this->db->execute()
+        );
+
+        $this->assertSame(23000, $e->getCode());
+        $this->assertSame(ExecutionFailureException::class, $e->getPrevious()::class);
+        $this->assertSame(0, $this->rowCount('test_children'));
+    }
+
+    public function testASyntaxErrorFailsToPrepare(): void
+    {
+        $e = $this->assertThrowsExactly(
+            PrepareStatementFailureException::class,
+            'SQLSTATE[HY000]: General error: 1 near "SELEC": syntax error',
+            fn() => $this->db->setQuery('SELEC 1')
+        );
+
+        $this->assertInstanceOf(\PDOException::class, $e->getPrevious());
     }
 }

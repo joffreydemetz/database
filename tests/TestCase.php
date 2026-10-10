@@ -22,6 +22,25 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
+     * Runs $fn and returns what it threw. Fails unless that is exactly $class
+     * (not a subclass, unlike expectException()) with exactly $message (not a
+     * substring, unlike expectExceptionMessage()).
+     */
+    protected function assertThrowsExactly(string $class, string $message, callable $fn): \Throwable
+    {
+        try {
+            $fn();
+        } catch (\Throwable $e) {
+            $this->assertSame($class, $e::class, 'exception class');
+            $this->assertSame($message, $e->getMessage(), 'exception message');
+
+            return $e;
+        }
+
+        $this->fail("Nothing was thrown, expected {$class}: {$message}");
+    }
+
+    /**
      * Get MySQL connection options for testing
      */
     protected function getMysqlOptions(): array
