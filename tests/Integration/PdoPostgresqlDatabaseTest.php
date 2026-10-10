@@ -180,15 +180,6 @@ class PdoPostgresqlDatabaseTest extends TestCase
         $this->assertEquals(1, $count);
     }
 
-    public function testPostgresqlDoesNotHaveMysqlOnlyMethods(): void
-    {
-        // PostgreSQL inherits these methods from PdoDatabase but they may not work properly
-        // Just verify the database is PostgreSQL type
-        $this->assertInstanceOf(\JDZ\Database\Pdo\PdoPostgresqlDatabase::class, $this->db);
-        $version = $this->db->getVersion();
-        $this->assertStringContainsString('PostgreSQL', $version);
-    }
-
     public function testQuoteName(): void
     {
         $quoted = $this->db->quoteName('table_name');

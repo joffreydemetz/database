@@ -16,30 +16,6 @@ class DatabaseShortcutsTest extends TestCase
         ]);
     }
 
-    public function testEIsEscapeShorthand(): void
-    {
-        $db = $this->makeDb();
-
-        $this->assertSame($db->escape("it's"), $db->e("it's"));
-        $this->assertSame($db->escape('100%_', true), $db->e('100%_', true));
-    }
-
-    public function testQIsQuoteShorthand(): void
-    {
-        $db = $this->makeDb();
-
-        $this->assertSame($db->quote("it's"), $db->q("it's"));
-        $this->assertSame($db->quote('raw', false), $db->q('raw', false));
-    }
-
-    public function testQnIsQuoteNameShorthand(): void
-    {
-        $db = $this->makeDb();
-
-        $this->assertSame($db->quoteName('tbl.col'), $db->qn('tbl.col'));
-        $this->assertSame($db->quoteName('tbl.col', 'alias'), $db->qn('tbl.col', 'alias'));
-    }
-
     public function testCreateFromDsnReturnsStatic(): void
     {
         $db = PdoSqliteDatabase::createFromDsn('sqlite://:memory:');

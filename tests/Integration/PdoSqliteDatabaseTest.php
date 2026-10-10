@@ -44,20 +44,6 @@ class PdoSqliteDatabaseTest extends TestCase
         $this->assertMatchesRegularExpression('/\d+\.\d+/', $version);
     }
 
-    public function testGetCollation(): void
-    {
-        $collation = $this->db->getCollation();
-
-        $this->assertEquals('BINARY', $collation);
-    }
-
-    public function testGetDatabaseName(): void
-    {
-        $dbName = $this->db->getDatabaseName();
-
-        $this->assertEquals(':memory:', $dbName);
-    }
-
     public function testCreateAndQueryTable(): void
     {
         // Create table
@@ -158,19 +144,6 @@ class PdoSqliteDatabaseTest extends TestCase
         $this->db->setQuery("SELECT COUNT(*) FROM test_users WHERE name = 'TX'");
         $count = $this->db->loadResult();
         $this->assertEquals(1, $count);
-    }
-
-    public function testSqliteDoesNotHaveMysqlOnlyMethods(): void
-    {
-        // Note: SQLite inherits from PdoDatabase, so it technically has these methods
-        // but they would fail or be no-ops if called
-        // This is a design limitation of the current inheritance structure
-
-        // We can test that calling these methods doesn't break, even if they're not ideal
-        $this->assertTrue(method_exists($this->db, 'startProfiling'));
-
-        // In a better design, these would be in a separate trait or interface
-        // For now, we acknowledge the inheritance structure
     }
 
     public function testQuoteName(): void

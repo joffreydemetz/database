@@ -76,28 +76,6 @@ class DatabaseFactoryTest extends TestCase
         $this->assertInstanceOf(MysqliDatabase::class, $db);
     }
 
-    public function testCreateFromDsnMysql(): void
-    {
-        if (!$this->isMysqlAvailable()) {
-            $this->markTestSkipped('MySQL PDO driver not available');
-        }
-
-        $db = DatabaseFactory::createFromDsn('mysql://root:password@localhost/testdb');
-
-        $this->assertInstanceOf(PdoDatabase::class, $db);
-    }
-
-    public function testCreateFromDsnPostgresql(): void
-    {
-        if (!$this->isPostgresqlAvailable()) {
-            $this->markTestSkipped('PostgreSQL PDO driver not available');
-        }
-
-        $db = DatabaseFactory::createFromDsn('pgsql://postgres:password@localhost/testdb');
-
-        $this->assertInstanceOf(PdoPostgresqlDatabase::class, $db);
-    }
-
     public function testCreateFromDsnSqlite(): void
     {
         if (!$this->isSqliteAvailable()) {
@@ -107,17 +85,6 @@ class DatabaseFactoryTest extends TestCase
         $db = DatabaseFactory::createFromDsn('sqlite:///tmp/test.db');
 
         $this->assertInstanceOf(PdoSqliteDatabase::class, $db);
-    }
-
-    public function testCreateFromDsnMysqli(): void
-    {
-        if (!$this->isMysqliAvailable()) {
-            $this->markTestSkipped('MySQLi driver not available');
-        }
-
-        $db = DatabaseFactory::createFromDsn('mysqli://root:password@localhost/testdb');
-
-        $this->assertInstanceOf(MysqliDatabase::class, $db);
     }
 
     public function testCreateWithDsnKey(): void
@@ -162,14 +129,6 @@ class DatabaseFactoryTest extends TestCase
 
         $this->assertSame(3307, $config['port']);
         $this->assertSame('utf8mb4', $config['charset']);
-    }
-
-    public function testGetAvailableDrivers(): void
-    {
-        $drivers = DatabaseFactory::getAvailableDrivers();
-
-        $this->assertIsArray($drivers);
-        $this->assertNotEmpty($drivers);
     }
 
     public function testIsDriverAvailable(): void

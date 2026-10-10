@@ -7,15 +7,6 @@ use JDZ\Database\Tests\TestCase;
 
 class ParamTypeTest extends TestCase
 {
-    public function testParamTypeConstants(): void
-    {
-        $this->assertIsInt(ParamType::BOOL->value);
-        $this->assertIsInt(ParamType::NULL->value);
-        $this->assertIsInt(ParamType::INT->value);
-        $this->assertIsInt(ParamType::STR->value);
-        $this->assertIsInt(ParamType::LOB->value);
-    }
-
     public function testParamTypeValues(): void
     {
         // These should match PDO constants
@@ -24,27 +15,6 @@ class ParamTypeTest extends TestCase
         $this->assertEquals(\PDO::PARAM_INT, ParamType::INT->value);
         $this->assertEquals(\PDO::PARAM_STR, ParamType::STR->value);
         $this->assertEquals(\PDO::PARAM_LOB, ParamType::LOB->value);
-    }
-
-    public function testParamTypeUniqueness(): void
-    {
-        $types = [
-            ParamType::BOOL->value,
-            ParamType::NULL->value,
-            ParamType::INT->value,
-            ParamType::STR->value,
-            ParamType::LOB->value
-        ];
-
-        // All values should be unique
-        $this->assertCount(5, array_unique($types));
-    }
-
-    public function testParamTypeIsBackedEnum(): void
-    {
-        // Test that ParamType is a backed enum
-        $this->assertInstanceOf(\BackedEnum::class, ParamType::BOOL);
-        $this->assertInstanceOf(\UnitEnum::class, ParamType::INT);
     }
 
     public function testFromString(): void

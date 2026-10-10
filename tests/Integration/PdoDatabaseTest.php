@@ -288,13 +288,4 @@ class PdoDatabaseTest extends TestCase
         $this->assertArrayHasKey('name', $columns);
         $this->assertArrayHasKey('email', $columns);
     }
-
-    public function testMysqlSpecificMethods(): void
-    {
-        // Test MySQL-only profiling methods exist
-        $this->assertTrue(method_exists($this->db, 'startProfiling'));
-        $this->assertTrue(method_exists($this->db, 'stopProfiling'));
-        $this->assertTrue(method_exists($this->db, 'lockTable'));
-        $this->assertTrue(method_exists($this->db, 'unlockTables'));
-    }
 }
