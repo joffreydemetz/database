@@ -2,8 +2,16 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/11.0/phpunit.xsd"
          bootstrap="vendor/autoload.php"
-         colors="true"
-         cacheDirectory=".phpunit.cache">
+         cacheDirectory=".phpunit.cache"
+         executionOrder="depends,defects"
+         requireCoverageMetadata="false"
+         beStrictAboutCoverageMetadata="false"
+         beStrictAboutOutputDuringTests="true"
+         displayDetailsOnPhpunitDeprecations="true"
+         displayDetailsOnTestsThatTriggerDeprecations="true"
+         displayDetailsOnTestsThatTriggerWarnings="true"
+         failOnRisky="true"
+         failOnWarning="true">
     <testsuites>
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
@@ -17,25 +25,9 @@
         <include>
             <directory>src</directory>
         </include>
-        <exclude>
-            <directory>src/Exception</directory>
-        </exclude>
     </source>
 
     <php>
-        <!-- Test Database Configuration -->
-        <env name="JDZ_MYSQL_HOST" value="localhost"/>
-        <env name="JDZ_MYSQL_PORT" value="3306"/>
-        <env name="JDZ_MYSQL_DATABASE" value="test_db"/>
-        <env name="JDZ_MYSQL_USERNAME" value="root"/>
-        <env name="JDZ_MYSQL_PASSWORD" value="password"/>
-        
-        <env name="JDZ_PGSQL_HOST" value="localhost"/>
-        <env name="JDZ_PGSQL_PORT" value="5432"/>
-        <env name="JDZ_PGSQL_DATABASE" value="test_db"/>
-        <env name="JDZ_PGSQL_USERNAME" value="postgres"/>
-        <env name="JDZ_PGSQL_PASSWORD" value="password"/>
-        
         <env name="JDZ_SQLITE_PATH" value=":memory:"/>
     </php>
 </phpunit>

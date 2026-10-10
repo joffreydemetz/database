@@ -50,7 +50,8 @@
     },
     "scripts": {
         "phpunit": "phpunit --colors=always",
-        "test": "@phpunit",
-        "examples": "php examples/run.php"
+        "test": "phpunit --colors=always --testdox",
+        "examples": "php examples/run.php",
+        "test-coverage": ["@putenv XDEBUG_MODE=coverage", "phpunit --coverage-html coverage"]
     }
 }
