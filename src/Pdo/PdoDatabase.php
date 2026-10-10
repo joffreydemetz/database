@@ -101,7 +101,14 @@ class PdoDatabase extends Database
 		}
 
 		$text = str_replace("'", "''", (string)$text);
-		return addcslashes($text, "\000\n\r\\\032");
+		$text = addcslashes($text, "\000\n\r\\\032");
+
+		// LIKE wildcards, as the other drivers do
+		if ($extra) {
+			$text = addcslashes($text, '%_');
+		}
+
+		return $text;
 	}
 
 	// Database Information Methods
