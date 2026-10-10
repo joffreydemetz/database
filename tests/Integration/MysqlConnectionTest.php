@@ -5,7 +5,9 @@ namespace JDZ\Database\Tests\Integration;
 use JDZ\Database\DatabaseFactory;
 use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Mysqli\MysqliConnection;
+use JDZ\Database\Mysqli\MysqliDatabase;
 use JDZ\Database\Pdo\PdoConnection;
+use JDZ\Database\Pdo\PdoDatabase;
 use JDZ\Database\Tests\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -152,5 +154,40 @@ class MysqlConnectionTest extends TestCase
         $db->setQuery('SELECT @@character_set_client, DATABASE()');
 
         $this->assertSame([$expected, $this->options['dbname']], $db->loadRow());
+    }
+
+    // ------------------------------------------------------------- reconnect
+
+    public static function databaseProvider(): array
+    {
+        return [
+            'PDO' => ['mysql'],
+            'MySQLi' => ['mysqli'],
+        ];
+    }
+
+    /**
+     * A connection the server dropped (wait_timeout, a restart, KILL) used to send
+     * execute() into endless recursion on the dead statement: it now reconnects
+     * once and runs the query again.
+     */
+    #[DataProvider('databaseProvider')]
+    public function testAQueryIsRunAgainOnANewConnectionWhenTheServerDroppedTheOldOne(string $driver): void
+    {
+        $this->requireMysqli($driver);
+        $db = 'mysql' === $driver ? new PdoDatabase($this->options) : new MysqliDatabase($this->getMysqliOptions());
+        $killer = new PdoDatabase($this->options);
+
+        $db->setQuery('SELECT CONNECTION_ID()');
+        $first = (int) $db->loadResult();
+
+        $db->setQuery('SELECT CONNECTION_ID()');
+        $killer->setQuery('KILL ' . $first);
+        $killer->execute();
+
+        $second = (int) $db->loadResult();
+
+        $this->assertGreaterThan(0, $second);
+        $this->assertNotSame($first, $second);
     }
 }

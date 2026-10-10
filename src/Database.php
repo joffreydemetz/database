@@ -38,6 +38,7 @@ abstract class Database implements DatabaseInterface
 
   protected bool $executed = false;
   protected int $count = 0;
+  protected bool $reconnecting = false;
   protected int $errorNum = 0;
   protected string $errorMsg;
 
@@ -103,16 +104,24 @@ abstract class Database implements DatabaseInterface
 
       $this->executed = $this->statement->execute();
     } catch (ExecutionFailureException $e) {
-      // Attempt reconnection if connection was lost
-      if (false === $this->connected()) {
+      // the server dropped the connection (wait_timeout, restart, KILL): drop the
+      // dead handle, reconnect, prepare the query again and run it once more
+      if (false === $this->reconnecting && false === $this->connected()) {
+        $this->reconnecting = true;
+        // connect() may run queries of its own (MySQLi sets the sql_mode)
+        $query = $this->query;
+
         try {
-          $this->connection = null;
+          $this->disconnect();
           $this->connect();
+          $this->setQuery($query);
+          $this->execute();
         } catch (DatabaseException $e2) {
-          throw $e;
+          throw new DatabaseException($e->getMessage(), $e->getCode(), $e);
+        } finally {
+          $this->reconnecting = false;
         }
 
-        $this->execute();
         return;
       }
 
