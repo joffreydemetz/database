@@ -67,11 +67,16 @@ class MysqliDatabase extends Database
 
 	public function connected(): bool
 	{
-		if ($this->sqlConn) {
-			return $this->sqlConn->ping();
+		if (!$this->sqlConn) {
+			return false;
 		}
 
-		return false;
+		// mysqli::ping() is deprecated since PHP 8.4: probe with a trivial query
+		try {
+			return false !== $this->sqlConn->query('SELECT 1');
+		} catch (\mysqli_sql_exception $e) {
+			return false;
+		}
 	}
 
 	public function disconnect()
@@ -284,22 +289,34 @@ class MysqliDatabase extends Database
 
 	// Transaction Methods
 
+	// START TRANSACTION / COMMIT / ROLLBACK cannot go through a prepared statement
+	// ("not supported in the prepared statement protocol"): use the connection's own calls
+
 	public function transactionStart(): void
 	{
-		$this->setQuery('START TRANSACTION');
-		$this->execute();
+		$this->connect();
+
+		if (!$this->sqlConn->begin_transaction()) {
+			throw new ExecutionFailureException($this->sqlConn->error);
+		}
 	}
 
 	public function transactionCommit(): void
 	{
-		$this->setQuery('COMMIT');
-		$this->execute();
+		$this->connect();
+
+		if (!$this->sqlConn->commit()) {
+			throw new ExecutionFailureException($this->sqlConn->error);
+		}
 	}
 
 	public function transactionRollback(): void
 	{
-		$this->setQuery('ROLLBACK');
-		$this->execute();
+		$this->connect();
+
+		if (!$this->sqlConn->rollback()) {
+			throw new ExecutionFailureException($this->sqlConn->error);
+		}
 	}
 
 	public function prepareStatement(string $query): MysqliStatement
