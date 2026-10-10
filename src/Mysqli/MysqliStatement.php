@@ -37,7 +37,8 @@ class MysqliStatement implements StatementInterface
 		'1'       => 'i',  // PDO::PARAM_INT
 		'2'       => 's',  // PDO::PARAM_STR
 		'3'       => 'b',  // PDO::PARAM_LOB
-		'5'       => 's',  // PDO::PARAM_NULL
+		'0'       => 's',  // PDO::PARAM_NULL (bound as a null string)
+		'5'       => 'i',  // PDO::PARAM_BOOL
 	];
 
 	/**
@@ -117,7 +118,8 @@ class MysqliStatement implements StatementInterface
 		$startPos  	= 0;
 		$quoteChar 	= '';
 		$literal    = '';
-		$mapping    = [];
+		$mapping    = [];   // name => every position it takes (a name may be used twice)
+		$position   = 0;
 		$replace    = [];
 		$matches    = [];
 		$pattern    = '/([:][a-zA-Z0-9_]+)/';
@@ -157,7 +159,7 @@ class MysqliStatement implements StatementInterface
 						$literal .= substr($substring, 0, $match[1]);
 					}
 
-					$mapping[$match[0]]     = \count($mapping);
+					$mapping[$match[0]][]   = $position++;
 					$endOfPlaceholder       = $match[1] + strlen($match[0]);
 					$beginOfNextPlaceholder = $matches[0][$i + 1][1] ?? strlen($substring);
 					$beginOfNextPlaceholder -= $endOfPlaceholder;
@@ -257,8 +259,10 @@ class MysqliStatement implements StatementInterface
 
 			if (!empty($this->parameterKeyMapping)) {
 				foreach ($this->bindedValues as $key => &$value) {
-					$params[$this->parameterKeyMapping[$key]] = &$value;
-					$types[$this->parameterKeyMapping[$key]]  = $this->typesKeyMapping[$key];
+					foreach ($this->parameterKeyMapping[$key] as $pos) {
+						$params[$pos] = &$value;
+						$types[$pos]  = $this->typesKeyMapping[$key];
+					}
 				}
 			} else {
 				foreach ($this->bindedValues as $key => &$value) {
@@ -404,11 +408,12 @@ class MysqliStatement implements StatementInterface
 	private function bindValues(array $values): bool
 	{
 		$params = [];
-		$types  = str_repeat('s', \count($values));
 
 		if (!empty($this->parameterKeyMapping)) {
 			foreach ($values as $key => &$value) {
-				$params[$this->parameterKeyMapping[$key]] = &$value;
+				foreach ($this->parameterKeyMapping[$key] as $pos) {
+					$params[$pos] = &$value;
+				}
 			}
 
 			ksort($params);
@@ -418,7 +423,7 @@ class MysqliStatement implements StatementInterface
 			}
 		}
 
-		array_unshift($params, $types);
+		array_unshift($params, str_repeat('s', \count($params)));
 
 		return \call_user_func_array([$this->statement, 'bind_param'], $params);
 	}

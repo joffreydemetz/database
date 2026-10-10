@@ -3,6 +3,7 @@
 namespace JDZ\Database\Tests\Integration;
 
 use JDZ\Database\Mysqli\MysqliDatabase;
+use JDZ\Database\Query\StringQuery;
 use JDZ\Database\Tests\TestCase;
 
 class MysqliDatabaseTest extends TestCase
@@ -335,5 +336,19 @@ class MysqliDatabaseTest extends TestCase
         $this->assertEquals('John Doe', $user->name);
         $this->assertEquals('john@example.com', $user->email);
         $this->assertEquals(30, $user->age);
+    }
+
+    public function testANamedParameterUsedTwiceIsBoundTwice(): void
+    {
+        $this->db->setQuery((new StringQuery('SELECT :v AS a, :v AS b'))->bindValue(':v', 'x'));
+
+        $this->assertSame(['a' => 'x', 'b' => 'x'], $this->db->loadAssoc());
+    }
+
+    public function testANullParameterIsBound(): void
+    {
+        $this->db->setQuery((new StringQuery('SELECT :v IS NULL AS isnull'))->bindValue(':v', null, 'null'));
+
+        $this->assertSame('1', (string)$this->db->loadResult());
     }
 }
