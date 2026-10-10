@@ -23,27 +23,25 @@ class MysqliConnection extends Connection
       return $this->connection;
     }
 
-    // \mysqli_report(\MYSQLI_REPORT_ERROR|\MYSQLI_REPORT_STRICT);
+    $connection = \mysqli_init();
 
-    $this->connection = \mysqli_init();
-
-    if (!$this->connection) {
-      $this->connection = null;
-
+    if (!$connection) {
       throw new DatabaseException('mysqli_init() error');
     }
 
-    $this->connection->options(\MYSQLI_SET_CHARSET_NAME, $this->charset);
+    // mysqli throws by default since PHP 8.1, and returns false when reporting is off:
+    // both end as a DatabaseException, and the handle is kept only once connected
+    try {
+      $connection->options(\MYSQLI_SET_CHARSET_NAME, $this->charset);
 
-    if (!$this->connection->real_connect($this->host, $this->user, $this->pass, null, $this->port, $this->socket)) {
-      throw new DatabaseException('Could not connect to MySQL: ' . $this->connection->connect_error);
+      if (!@$connection->real_connect($this->host, $this->user, $this->pass, $this->dbname, $this->port, $this->socket)) {
+        throw new DatabaseException('Could not connect to MySQL: ' . $connection->connect_error, $connection->connect_errno);
+      }
+    } catch (\mysqli_sql_exception $e) {
+      throw new DatabaseException('Could not connect to MySQL: ' . $e->getMessage(), $e->getCode(), $e);
     }
 
-    $this->connection->select_db($this->dbname);
-
-    // $this->connection->set_charset($this->charset);
-
-    return $this->connection;
+    return $this->connection = $connection;
   }
 
   public function checkIfDriverAvailable()

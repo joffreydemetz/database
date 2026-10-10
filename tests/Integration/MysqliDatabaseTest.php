@@ -598,4 +598,67 @@ class MysqliDatabaseTest extends TestCase
             $this->assertInstanceOf(\mysqli_sql_exception::class, $e->getPrevious());
         }
     }
+
+    // ------------------------------------------------------ driver robustness
+
+    /**
+     * Positional values used to be bound in the order bindValue() was called,
+     * while their types were sorted by position.
+     */
+    public function testPositionalParametersAreBoundByPosition(): void
+    {
+        $this->db->setQuery((new StringQuery('SELECT ? AS a, ? AS b'))->bindValue(2, 42, 'int')->bindValue(1, 'x'));
+
+        $this->assertSame(['a' => 'x', 'b' => 42], $this->db->loadAssoc());
+    }
+
+    /**
+     * lockTable() and unlockTables() used to call query() on a connection that
+     * was never opened.
+     */
+    public function testLockingConnectsFirst(): void
+    {
+        $setup = new MysqliDatabase($this->getMysqlOptions());
+        $setup->setQuery($this->getMysqlTestTableSql('test_users'));
+        $setup->execute();
+        $setup->disconnect();
+
+        $this->db->lockTable('#__users');
+        $this->db->setQuery('SELECT COUNT(*) FROM test_users');
+        $this->assertSame(0, $this->db->loadResult());
+        $this->db->unlockTables();
+
+        $fresh = new MysqliDatabase($this->getMysqlOptions());
+        $fresh->unlockTables();
+        $this->assertTrue($fresh->connected());
+        $fresh->disconnect();
+    }
+
+    public static function missingOptionProvider(): array
+    {
+        return [
+            'no port' => ['port'],
+            'no host' => ['host'],
+        ];
+    }
+
+    /**
+     * Like PdoDatabase, a missing host or port falls back to the defaults (it was
+     * a TypeError, or an undefined key on every connect).
+     */
+    #[DataProvider('missingOptionProvider')]
+    public function testAMissingHostOrPortFallsBackToTheDefault(string $option): void
+    {
+        $options = $this->getMysqlOptions();
+        if (3306 !== $options['port'] || !in_array($options['host'], ['127.0.0.1', 'localhost'], true)) {
+            $this->markTestSkipped('needs the server on localhost:3306');
+        }
+        unset($options[$option]);
+
+        $db = new MysqliDatabase($options);
+        $db->setQuery('SELECT 1');
+
+        $this->assertSame(1, $db->loadResult());
+        $db->disconnect();
+    }
 }

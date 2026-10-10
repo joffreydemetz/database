@@ -43,10 +43,15 @@ class MysqliDatabase extends Database
 	public function connect()
 	{
 		if (!$this->sqlConn) {
-			$this->connection = new MysqliConnection($this->options['host'], $this->options['dbname'], $this->options['user'], $this->options['pass']);
-			$this->connection->charset = $this->options['charset'];
+			$this->connection = new MysqliConnection(
+				$this->options['host'] ?? 'localhost',
+				$this->options['dbname'],
+				$this->options['user'] ?? '',
+				$this->options['pass'] ?? ''
+			);
+			$this->connection->charset = $this->options['charset'] ?? 'utf8mb4';
 
-			if ($this->options['port']) {
+			if (!empty($this->options['port'])) {
 				$this->connection->port = $this->options['port'];
 			}
 
@@ -270,6 +275,8 @@ class MysqliDatabase extends Database
 
 	public function lockTable(string $table): void
 	{
+		$this->connect();
+
 		$table = str_replace('#__', $this->tablePrefix, $table);
 		$sql = 'LOCK TABLES ' . $this->quoteName($table) . ' WRITE';
 
@@ -281,6 +288,8 @@ class MysqliDatabase extends Database
 
 	public function unlockTables(): void
 	{
+		$this->connect();
+
 		// UNLOCK TABLES cannot be used in prepared statements
 		if (!$this->sqlConn->query('UNLOCK TABLES')) {
 			throw new ExecutionFailureException($this->sqlConn->error);

@@ -190,4 +190,25 @@ class MysqlConnectionTest extends TestCase
         $this->assertGreaterThan(0, $second);
         $this->assertNotSame($first, $second);
     }
+
+    /**
+     * mysqli throws since PHP 8.1: a refused connection escaped as a raw
+     * mysqli_sql_exception, and a second connect() returned the dead handle.
+     */
+    public function testMysqliConnectionWrapsTheServersRefusalEveryTime(): void
+    {
+        $this->requireMysqli();
+        $connection = new MysqliConnection($this->options['host'], 'jdz_no_such_database', $this->options['user'], $this->options['pass']);
+        $connection->port = $this->options['port'];
+
+        foreach (['first attempt', 'retry'] as $attempt) {
+            try {
+                $connection->connect();
+                $this->fail($attempt . ': connected to a database that does not exist');
+            } catch (DatabaseException $e) {
+                $this->assertStringStartsWith('Could not connect to MySQL: ', $e->getMessage(), $attempt);
+                $this->assertSame(1049, $e->getCode(), $attempt);
+            }
+        }
+    }
 }

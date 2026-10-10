@@ -265,8 +265,9 @@ class MysqliStatement implements StatementInterface
 					}
 				}
 			} else {
+				// keyed by position like the types, so both are sorted alike below
 				foreach ($this->bindedValues as $key => &$value) {
-					$params[] = &$value;
+					$params[$key] = &$value;
 					$types[$key] = $this->typesKeyMapping[$key];
 				}
 			}
