@@ -305,8 +305,10 @@ abstract class Database implements DatabaseInterface
     $this->execute();
 
     $result = null;
-    if ($rows = $this->loadColumn()) {
-      $result = $rows[0];
+
+    // read this execution: loadColumn() would execute the query a second time
+    if ($row = $this->fetchRow()) {
+      $result = $row[0];
     }
 
     $this->freeResult();

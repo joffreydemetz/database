@@ -203,4 +203,12 @@ class DatabaseBehaviourTest extends TestCase
         $this->assertFalse($this->db->recordExists('#__users', ['name' => "O'Reilly"]));
         $this->assertFalse($this->db->recordExists('#__users', []));
     }
+
+    public function testLoadResultRunsTheQueryOnce(): void
+    {
+        $id = $this->scalar("INSERT INTO #__users (name) VALUES ('Dan') RETURNING id");
+
+        $this->assertSame(4, $id);
+        $this->assertSame(4, $this->scalar('SELECT COUNT(*) FROM #__users'), 'one row inserted, not two');
+    }
 }
