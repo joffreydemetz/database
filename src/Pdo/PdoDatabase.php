@@ -101,7 +101,8 @@ class PdoDatabase extends Database
 		}
 
 		$text = str_replace("'", "''", (string)$text);
-		$text = addcslashes($text, "\000\n\r\\\032");
+		// MySQL's escape sequences (addcslashes() wrote NUL and Ctrl-Z as octal, which MySQL misreads)
+		$text = strtr($text, ["\0" => '\\0', "\n" => '\\n', "\r" => '\\r', '\\' => '\\\\', "\x1a" => '\\Z']);
 
 		// LIKE wildcards, as the other drivers do
 		if ($extra) {

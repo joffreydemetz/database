@@ -272,6 +272,8 @@ class PdoDatabaseTest extends TestCase
             'quotes'      => ['it\'s "quoted"'],
             'backslashes' => ['C:\\dir\\'],
             'line breaks' => ["a\r\nb"],
+            'a NUL byte'  => ["a\0b"],
+            'a Ctrl-Z'    => ["a\x1ab"],
             'accents'     => ["l'été à Noël"],
         ];
     }

@@ -18,6 +18,8 @@ class PdoEscapeTest extends TestCase
             'a quote is doubled'           => ["O'Reilly", false, "O''Reilly"],
             'a backslash is escaped'       => ['C:\\dir', false, 'C:\\\\dir'],
             'a newline is escaped'         => ["a\nb", false, 'a\\nb'],
+            'a NUL byte is \0'             => ["a\0b", false, 'a\\0b'],
+            'a Ctrl-Z is \Z'               => ["a\x1ab", false, 'a\\Zb'],
             'wildcards kept by default'    => ['50%_off', false, '50%_off'],
             'wildcards escaped for LIKE'   => ['50%_off', true, '50\\%\\_off'],
         ];
