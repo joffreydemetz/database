@@ -7,6 +7,7 @@
 
 namespace JDZ\Database\Pdo;
 
+use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Pdo\PdoDatabase;
 
 /**
@@ -43,11 +44,10 @@ class PdoPostgresqlDatabase extends PdoDatabase
             return str_replace(',', '.', (string)$text);
         }
 
-        // PostgreSQL uses '' for escaping single quotes
+        // pg_escape_string() semantics under standard_conforming_strings = on
+        // (the default since 9.1): the quote is doubled, a backslash is a plain
+        // character (2.3.0 — it used to be doubled, which broke every backslash)
         $text = str_replace("'", "''", (string)$text);
-
-        // PostgreSQL also needs backslash escaping
-        $text = str_replace('\\', '\\\\', $text);
 
         if ($extra) {
             $text = \addcslashes($text, '%_');
@@ -149,12 +149,16 @@ class PdoPostgresqlDatabase extends PdoDatabase
         return $this->loadObjectList() ?: [];
     }
 
+    /**
+     * PostgreSQL has no SHOW CREATE TABLE; rebuilding the DDL from
+     * information_schema is not done here. 2.3.0 (D24): an exception, where
+     * an empty array used to pass for "no tables".
+     *
+     * @throws DatabaseException always
+     */
     public function getTableCreate(array $tables): array
     {
-        // PostgreSQL doesn't have SHOW CREATE TABLE
-        // Would need to reconstruct from information_schema
-        // For now, return empty array
-        return [];
+        throw new DatabaseException('getTableCreate() is not supported on PostgreSQL.');
     }
 
     public function tableExists(string $table): bool

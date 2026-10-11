@@ -188,6 +188,15 @@ class PdoPostgresqlDatabaseTest extends TestCase
         $this->assertEquals('"table_name"', $quoted);
     }
 
+    public function testGetTableCreateIsNotSupported(): void
+    {
+        // 2.3.0 (D24): it used to answer [] for every table
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessage('not supported on PostgreSQL');
+
+        $this->db->getTableCreate(['test_users']);
+    }
+
     public function testEscape(): void
     {
         $escaped = $this->db->escape("Test's value");
