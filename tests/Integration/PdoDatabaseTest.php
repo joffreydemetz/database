@@ -255,6 +255,57 @@ class PdoDatabaseTest extends TestCase
         $this->assertEquals(0, $count);
     }
 
+    public function testGetTableCreateReturnsTheDdlAndThrowsOnAMissingTable(): void
+    {
+        $this->db->setQuery($this->getMysqlTestTableSql('test_users'));
+        $this->db->execute();
+
+        $create = $this->db->getTableCreate(['test_users']);
+        $this->assertStringStartsWith('CREATE TABLE `test_users`', $create['test_users']);
+
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessage("Table 'test_missing' does not exist");
+
+        $this->db->getTableCreate(['test_users', 'test_missing']);
+    }
+
+    /**
+     * 2.3.0 (D24): the PDO driver ignored sqlModes; MySQLi applied them. Same
+     * defaults and the same SET on connect for both.
+     */
+    public function testConnectAppliesTheDefaultSqlModes(): void
+    {
+        $this->db->setQuery('SELECT @@SESSION.sql_mode');
+
+        $this->assertSame('STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', $this->db->loadResult());
+    }
+
+    public function testConnectAppliesTheGivenSqlModes(): void
+    {
+        $db = new PdoDatabase(['sqlModes' => ['ANSI_QUOTES', 'NO_ZERO_DATE']] + $this->getMysqlOptions());
+        $db->setQuery('SELECT @@SESSION.sql_mode');
+
+        $this->assertSame('ANSI_QUOTES,NO_ZERO_DATE', $db->loadResult());
+
+        $db->disconnect();
+    }
+
+    public function testProfilesAreObjectsLikeMysqli(): void
+    {
+        // 2.3.0 (D24): PDO returned arrays, MySQLi objects
+        $this->db->startProfiling();
+        $this->db->setQuery('SELECT 1');
+        $this->db->execute();
+
+        $profiles = $this->db->showProfiles();
+        $this->db->stopProfiling();
+
+        $this->assertNotEmpty($profiles);
+        $this->assertIsObject($profiles[0]);
+        $this->assertIsNumeric($profiles[0]->Query_ID);
+        $this->assertIsArray($profiles[0]->infos);
+    }
+
     public function testQuote(): void
     {
         $this->assertSame("'O''Reilly'", $this->db->quote("O'Reilly"));

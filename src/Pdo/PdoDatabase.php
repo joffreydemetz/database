@@ -7,6 +7,7 @@
 
 namespace JDZ\Database\Pdo;
 
+use JDZ\Database\Exception\DatabaseException;
 use JDZ\Database\Database;
 use JDZ\Database\Pdo\PdoStatement;
 use JDZ\Database\Exception\PrepareStatementFailureException;
@@ -39,8 +40,20 @@ class PdoDatabase extends Database
 			$this->nameQuote = '"';
 		}
 
+		// the same defaults as MysqliDatabase (2.3.0, D24: PDO ignored sqlModes)
+		if (empty($options['sqlModes']) && 'mysql' === ($options['driver'] ?? 'mysql')) {
+			$options['sqlModes'] = self::DEFAULT_SQL_MODES;
+		}
+
 		parent::__construct($options);
 	}
+
+	/** What MysqliDatabase applies too */
+	public const DEFAULT_SQL_MODES = [
+		'STRICT_TRANS_TABLES',
+		'ERROR_FOR_DIVISION_BY_ZERO',
+		'NO_ENGINE_SUBSTITUTION',
+	];
 
 	public function connect()
 	{
@@ -66,6 +79,11 @@ class PdoDatabase extends Database
 			}
 
 			$this->sqlConn = $this->connection->connect($this->options['driverOptions']);
+
+			if ('mysql' === $this->connection->driver && !empty($this->options['sqlModes'])) {
+				$this->setQuery('SET @@SESSION.sql_mode = \'' . implode(',', $this->options['sqlModes']) . '\';');
+				$this->execute();
+			}
 		}
 	}
 
@@ -171,6 +189,11 @@ class PdoDatabase extends Database
 		$results = [];
 
 		foreach ($tables as $table) {
+			// 2.3.0 (D24): a missing table is an error on every driver, not a silent gap
+			if (!$this->tableExists($table)) {
+				throw new DatabaseException("Table '" . $table . "' does not exist.");
+			}
+
 			$this->setQuery('SHOW CREATE table ' . $this->quoteName($this->escape($table)));
 			$row = $this->loadRow();
 			if ($row) {
@@ -246,7 +269,8 @@ class PdoDatabase extends Database
 			foreach ($rows as $row) {
 				$this->setQuery('SHOW PROFILE FOR QUERY ' . $row['Query_ID']);
 				$row['infos'] = $this->loadAssocList();
-				$profiles[] = $row;
+				// objects, like MysqliDatabase (2.3.0, D24)
+				$profiles[] = (object)$row;
 			}
 		}
 

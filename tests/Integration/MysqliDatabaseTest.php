@@ -315,6 +315,8 @@ class MysqliDatabaseTest extends TestCase
 
         $this->assertIsArray($profiles);
         $this->assertNotEmpty($profiles);
+        $this->assertIsObject($profiles[0]);
+        $this->assertIsNumeric($profiles[0]->Query_ID);
 
         $this->db->stopProfiling();
     }
@@ -354,6 +356,15 @@ class MysqliDatabaseTest extends TestCase
         $this->db->setQuery((new StringQuery('SELECT :v IS NULL AS isnull'))->bindValue(':v', null, 'null'));
 
         $this->assertSame('1', (string)$this->db->loadResult());
+    }
+
+    public function testGetTableCreateThrowsOnAMissingTable(): void
+    {
+        // 2.3.0 (D24): the missing table used to be silently left out
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessage("Table 'test_missing' does not exist");
+
+        $this->db->getTableCreate(['test_missing']);
     }
 
     public function testConnectAppliesTheDefaultSqlModes(): void

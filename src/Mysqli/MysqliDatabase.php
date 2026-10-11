@@ -182,6 +182,11 @@ class MysqliDatabase extends Database
 		$results = [];
 
 		foreach ($tables as $table) {
+			// 2.3.0 (D24): a missing table is an error on every driver, not a silent gap
+			if (!$this->tableExists($table)) {
+				throw new DatabaseException("Table '" . $table . "' does not exist.");
+			}
+
 			$this->setQuery('SHOW CREATE table ' . $this->quoteName($this->escape($table)));
 			$row = $this->loadRow();
 			if ($row) {

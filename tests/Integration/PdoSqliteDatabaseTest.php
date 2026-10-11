@@ -245,7 +245,16 @@ class PdoSqliteDatabaseTest extends TestCase
         $this->db->setQuery($sql);
         $this->db->execute();
 
-        $this->assertSame(['test_users' => $sql], $this->db->getTableCreate(['test_users', 'test_missing']));
+        $this->assertSame(['test_users' => $sql], $this->db->getTableCreate(['test_users']));
+    }
+
+    public function testGetTableCreateThrowsOnAMissingTable(): void
+    {
+        // 2.3.0 (D24): the missing table used to be silently left out
+        $this->expectException(DatabaseException::class);
+        $this->expectExceptionMessage("Table 'test_missing' does not exist");
+
+        $this->db->getTableCreate(['test_missing']);
     }
 
     public function testRenameTable(): void
