@@ -100,8 +100,10 @@ leave it empty to fall back to the explicit `driver` + nested config.
 ### SQLite Options
 - **dbname** - Database file path or `:memory:` for in-memory database
 
-### MySQLi Options
-- **sqlModes** - Array of SQL modes (STRICT_TRANS_TABLES, NO_ZERO_DATE, etc.)
+### MySQL Options (PDO and MySQLi)
+- **sqlModes** - Array of SQL modes set on the session at connect time. Default on both drivers:
+  `STRICT_TRANS_TABLES, ERROR_FOR_DIVISION_BY_ZERO, NO_ENGINE_SUBSTITUTION` (an empty array means the
+  default; since 2.3.0 the PDO driver applies them too — it used to leave the server's own modes).
 
 ## Supported Database Drivers
 
@@ -309,6 +311,32 @@ Unit tests and the SQLite integration tests run with no setup. MySQL and Postgre
 - Driver availability detection  
 - Environment variable configuration  
 - Error handling for unsupported drivers  
+
+## Upgrading to 2.3.0
+
+The generated SQL changes; every consumer runs it. In order of impact:
+
+- **`sqlModes` on PDO MySQL.** The session now runs with `STRICT_TRANS_TABLES, ERROR_FOR_DIVISION_BY_ZERO,
+  NO_ENGINE_SUBSTITUTION` (or your `sqlModes`), as it always did with MySQLi. Strict mode refuses an
+  out-of-range or truncated write instead of adjusting it: run a staging day before production.
+- **`LIMIT` on its own line** (`PHP_EOL`, like every clause) — byte-different SQL, same result.
+  `setLimit(0, 20)` (an offset without a limit) now renders `LIMIT 18446744073709551615 OFFSET 20`
+  (MySQL's idiom for "every row after"); it used to be dropped.
+- **A changed WHERE glue throws** (`QueryException`): `->where('a', 'OR')->where('b', 'AND')` used to glue
+  everything with AND, silently. One glue per statement; group with parentheses inside a condition instead.
+- **`quote()` / `q()` quotes every string**: `q('123')` is `'123'` (it was a bare `123`). The PHP type
+  decides; pass an int where you mean a number.
+- **Union sub-queries keep their lines**: a `-- comment` no longer eats what followed it.
+- **PostgreSQL `escape()`** no longer doubles backslashes (`standard_conforming_strings = on`).
+- **`getTableCreate()` throws** on a missing table on every driver (SQLite used to skip it), and always on
+  PostgreSQL (unsupported; it answered `[]`).
+- `showProfiles()` returns objects on PDO as on MySQLi; `isDriverAvailable()` knows the aliases
+  `create()` accepts (`postgres`, `sqlite3`, `pdo_mysql`, …); a PostgreSQL `socket` goes in the DSN as
+  `host=/path` (`PdoConnection::dsn()` is public).
+
+## Changelog
+
+- **2.3.0** (2026-10-11) — see *Upgrading to 2.3.0*: LIMIT on its own line and offset-only kept, a changed WHERE glue throws, `quote()` quotes every string, union sub-queries keep their lines, PostgreSQL escaping without backslash doubling, `getTableCreate()` throws on a missing table (and on PostgreSQL), `sqlModes` applied by the PDO MySQL driver, profiles as objects on both drivers, alias-aware `isDriverAvailable()`, PostgreSQL socket as `host=`.
 
 ## License
 
