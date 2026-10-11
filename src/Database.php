@@ -472,14 +472,12 @@ abstract class Database implements DatabaseInterface
    * QUOTES
    *******************************/
 
+  /**
+   * A quoted string literal. Every string is quoted (2.3.0): the PHP type
+   * decides, not the content — a digit string used to go out bare.
+   */
   public function quote(string $text, bool $escape = true): string
   {
-    if (is_int($text) || ctype_digit($text)) {
-      if (!preg_match("/^[0]+/", $text)) {
-        return $text;
-      }
-    }
-
     if (true === $escape) {
       $text = $this->escape($text);
     }

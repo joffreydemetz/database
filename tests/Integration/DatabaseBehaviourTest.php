@@ -64,6 +64,10 @@ class DatabaseBehaviourTest extends TestCase
     {
         $this->assertSame("'O''Reilly'", $this->db->q("O'Reilly"));
         $this->assertSame("'007'", $this->db->q('007'), 'a leading zero is kept as text');
+        // 2.3.0 (D6): the PHP type decides, not the content — a digit string is a string
+        $this->assertSame("'123'", $this->db->q('123'));
+        $this->assertSame("'0'", $this->db->q('0'));
+        $this->assertSame("''", $this->db->q(''));
         $this->assertSame("'it's'", $this->db->q("it's", false), 'escape=false wraps only');
         $this->assertSame("O'Reilly", $this->scalar('SELECT ' . $this->db->q("O'Reilly")));
     }
