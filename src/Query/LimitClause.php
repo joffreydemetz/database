@@ -38,12 +38,21 @@ trait LimitClause
      */
     protected function buildLimitClause(): string
     {
-        if ($this->limit > 0 && $this->offset > 0) {
-            return ' LIMIT ' . $this->limit . ' OFFSET ' . $this->offset;
-        } elseif ($this->limit > 0) {
-            return ' LIMIT ' . $this->limit;
+        $limit = max(0, $this->limit);
+        $offset = max(0, $this->offset);
+
+        if (0 === $limit && 0 === $offset) {
+            return '';
         }
 
-        return '';
+        // on its own line like every other clause (2.3.0); an offset without a
+        // limit means "every row after it", MySQL's idiom for it (it was dropped)
+        $clause = PHP_EOL . 'LIMIT ' . (0 === $limit ? '18446744073709551615' : $limit);
+
+        if ($offset > 0) {
+            $clause .= ' OFFSET ' . $offset;
+        }
+
+        return $clause;
     }
 }

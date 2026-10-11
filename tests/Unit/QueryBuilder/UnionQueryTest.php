@@ -20,15 +20,21 @@ class UnionQueryTest extends QueryTestCase
                 static fn() => (new UnionQuery())->addQuery('SELECT id FROM a')->addQueryDistinct('SELECT id FROM b'),
                 self::sql('SELECT id FROM a', 'UNION', 'SELECT id FROM b'),
             ],
-            'a builder is inlined on one line' => [
+            'a builder keeps its lines (2.3.0: they were collapsed, a -- comment ate the rest)' => [
                 static fn() => (new UnionQuery())
                     ->addQuery((new SelectQuery())->select('id')->from('a')->where('x = 1'))
                     ->addQuery(new StringQuery('SELECT id FROM b')),
-                self::sql('SELECT id FROM a WHERE x = 1', 'UNION ALL', 'SELECT id FROM b'),
+                self::sql('SELECT id', 'FROM a', 'WHERE x = 1', 'UNION ALL', 'SELECT id FROM b'),
+            ],
+            'a comment line stays on its own line' => [
+                static fn() => (new UnionQuery())
+                    ->addQuery("SELECT id FROM a -- the first\nWHERE x = 1")
+                    ->addQuery("  SELECT id\n  FROM b  "),
+                self::sql('SELECT id FROM a -- the first', 'WHERE x = 1', 'UNION ALL', 'SELECT id', '  FROM b'),
             ],
             'order and limit apply to the whole union' => [
                 static fn() => (new UnionQuery())->addQuery('SELECT id FROM a')->addQuery('SELECT id FROM b')->order('id DESC')->setLimit(5),
-                self::sql('SELECT id FROM a', 'UNION ALL', 'SELECT id FROM b', 'ORDER BY id DESC LIMIT 5'),
+                self::sql('SELECT id FROM a', 'UNION ALL', 'SELECT id FROM b', 'ORDER BY id DESC', 'LIMIT 5'),
             ],
             'one query' => [
                 static fn() => (new UnionQuery())->addQuery('SELECT id FROM a'),

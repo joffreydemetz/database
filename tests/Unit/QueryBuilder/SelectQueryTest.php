@@ -53,11 +53,11 @@ class SelectQueryTest extends QueryTestCase
             ],
             'limit' => [
                 static fn() => (new SelectQuery())->select('*')->from('users')->setLimit(10),
-                self::sql('SELECT *', 'FROM users LIMIT 10'),
+                self::sql('SELECT *', 'FROM users', 'LIMIT 10'),
             ],
             'limit and offset' => [
                 static fn() => (new SelectQuery())->select('*')->from('users')->setLimit(10, 20),
-                self::sql('SELECT *', 'FROM users LIMIT 10 OFFSET 20'),
+                self::sql('SELECT *', 'FROM users', 'LIMIT 10 OFFSET 20'),
             ],
             'every clause, in SQL order' => [
                 static fn() => (new SelectQuery())
@@ -76,7 +76,8 @@ class SelectQueryTest extends QueryTestCase
                     'WHERE u.active = 1',
                     'GROUP BY u.id',
                     'HAVING COUNT(p.id) > :min',
-                    'ORDER BY total DESC LIMIT 10 OFFSET 5',
+                    'ORDER BY total DESC',
+                    'LIMIT 10 OFFSET 5',
                 ),
             ],
         ];

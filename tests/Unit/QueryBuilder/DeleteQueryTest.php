@@ -23,7 +23,7 @@ class DeleteQueryTest extends QueryTestCase
             ],
             'order and limit' => [
                 static fn() => (new DeleteQuery())->delete('logs')->where('ts < :before')->order('ts ASC')->setLimit(1000),
-                self::sql('DELETE', 'FROM logs', 'WHERE ts < :before', 'ORDER BY ts ASC LIMIT 1000'),
+                self::sql('DELETE', 'FROM logs', 'WHERE ts < :before', 'ORDER BY ts ASC', 'LIMIT 1000'),
             ],
         ];
     }

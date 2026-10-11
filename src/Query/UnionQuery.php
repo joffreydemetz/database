@@ -79,7 +79,8 @@ class UnionQuery extends Query
     public function addQuery(SelectQuery|StringQuery|string $query, bool $distinct = false): static
     {
         $this->queries[] = [
-            'query' => preg_replace('/\s*\R\s*/', ' ', trim((string)$query)),
+            // the lines are kept (2.3.0: collapsing them let a -- comment eat the rest)
+            'query' => preg_replace('/\R/', PHP_EOL, trim((string)$query)),
             'distinct' => $distinct
         ];
 

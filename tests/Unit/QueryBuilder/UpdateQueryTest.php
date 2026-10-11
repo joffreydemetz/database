@@ -27,7 +27,7 @@ class UpdateQueryTest extends QueryTestCase
             ],
             'order and limit' => [
                 static fn() => (new UpdateQuery())->update('jobs')->set('done = 1')->where('done = 0')->order('id ASC')->setLimit(100),
-                self::sql('UPDATE jobs', 'SET done = 1', 'WHERE done = 0', 'ORDER BY id ASC LIMIT 100'),
+                self::sql('UPDATE jobs', 'SET done = 1', 'WHERE done = 0', 'ORDER BY id ASC', 'LIMIT 100'),
             ],
         ];
     }
