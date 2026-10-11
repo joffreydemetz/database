@@ -199,4 +199,41 @@ class ConnectionTest extends TestCase
 
         $this->assertSame(['ABC' => 1], $pdo->query('SELECT 1 AS abc')->fetch(\PDO::FETCH_ASSOC));
     }
+
+    /**
+     * 2.3.0 (D24): a PostgreSQL socket goes in host= (libpq's form), where
+     * unix_socket= is MySQL's. The DSN is built by dsn(), testable without a server.
+     */
+    public static function dsns(): array
+    {
+        return [
+            'mysql' => ['mysql', null, 'mysql:dbname=app;host=127.0.0.1;port=3306;charset=utf8mb4'],
+            'mysql through a socket' => ['mysql', '/var/run/mysqld/mysqld.sock', 'mysql:dbname=app;host=127.0.0.1;port=3306;unix_socket=/var/run/mysqld/mysqld.sock;charset=utf8mb4'],
+            'pgsql' => ['pgsql', null, 'pgsql:dbname=app;host=127.0.0.1;port=3306'],
+            'pgsql through a socket' => ['pgsql', '/var/run/postgresql', 'pgsql:dbname=app;host=/var/run/postgresql;port=3306'],
+        ];
+    }
+
+    #[DataProvider('dsns')]
+    public function testTheDsn(string $driver, ?string $socket, string $expected): void
+    {
+        $connection = new PdoConnection('127.0.0.1', 'app', 'root', 'secret');
+        $connection->driver = $driver;
+        $connection->port = 3306;
+        $connection->charset = 'utf8mb4';
+
+        if (null !== $socket) {
+            $connection->socket = $socket;
+        }
+
+        $this->assertSame($expected, $connection->dsn());
+    }
+
+    public function testTheSqliteDsn(): void
+    {
+        $connection = new PdoConnection('', ':memory:', '', '');
+        $connection->driver = 'sqlite';
+
+        $this->assertSame('sqlite::memory:', $connection->dsn());
+    }
 }

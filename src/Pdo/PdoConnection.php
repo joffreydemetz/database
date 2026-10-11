@@ -19,31 +19,46 @@ class PdoConnection extends Connection
 
   public string $driver = 'mysql';
 
+  /**
+   * The PDO DSN this connection opens. A PostgreSQL socket is libpq's
+   * host=/path (2.3.0, D24 — unix_socket= is MySQL's keyword, pgsql ignored it).
+   */
+  public function dsn(): string
+  {
+    if ($this->driver === 'sqlite') {
+      return 'sqlite:' . $this->dbname;
+    }
+
+    $host = ($this->socket && $this->driver === 'pgsql') ? $this->socket : $this->host;
+    $dsn = $this->driver . ':dbname=' . $this->dbname . ';host=' . $host;
+
+    if ($this->port) {
+      $dsn .= ';port=' . $this->port;
+    }
+
+    if ($this->socket && $this->driver !== 'pgsql') {
+      $dsn .= ';unix_socket=' . $this->socket;
+    }
+
+    if ($this->charset && $this->driver === 'mysql') {
+      $dsn .= ';charset=' . $this->charset;
+    }
+
+    return $dsn;
+  }
+
   public function connect(array $attrs = [])
   {
     if ($this->connection) {
       return $this->connection;
     }
 
+    $dsn = $this->dsn();
+
     if ($this->driver === 'sqlite') {
-      $dsn = 'sqlite:' . $this->dbname;
       $user = null;
       $pass = null;
     } else {
-      $dsn = $this->driver . ':dbname=' . $this->dbname . ';host=' . $this->host;
-
-      if ($this->port) {
-        $dsn .= ';port=' . $this->port;
-      }
-
-      if ($this->socket) {
-        $dsn .= ';unix_socket=' . $this->socket;
-      }
-
-      if ($this->charset && $this->driver === 'mysql') {
-        $dsn .= ';charset=' . $this->charset;
-      }
-
       $user = $this->user;
       $pass = $this->pass;
     }
