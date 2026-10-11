@@ -147,9 +147,15 @@ class DatabaseFactory
      * @param   string  $driver  Driver name
      * @return  bool    True if driver is available
      */
+    /**
+     * Alias-aware (2.3.0, D24): every name create() accepts ('postgres',
+     * 'sqlite3', 'pdo_mysql', ...) answers for its driver.
+     */
     public static function isDriverAvailable(string $driver): bool
     {
-        return in_array(strtolower($driver), static::getAvailableDrivers());
+        $driver = static::normalizeDriver($driver);
+
+        return in_array($driver, static::getAvailableDrivers(), true);
     }
 
     /**
@@ -280,6 +286,7 @@ class DatabaseFactory
         return match (strtolower($scheme)) {
             'pdo-mysql', 'pdo_mysql', 'mysql2' => 'mysql',
             'pdo-pgsql', 'pdo_pgsql', 'postgresql', 'postgres' => 'pgsql',
+            'pdo-sqlite', 'pdo_sqlite', 'sqlite3' => 'sqlite',
             default => strtolower($scheme),
         };
     }

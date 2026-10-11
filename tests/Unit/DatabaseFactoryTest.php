@@ -246,4 +246,31 @@ class DatabaseFactoryTest extends TestCase
         $this->assertFalse(DatabaseFactory::isDriverAvailable('oracle'));
         $this->assertFalse(DatabaseFactory::isDriverAvailable(''));
     }
+
+    /**
+     * 2.3.0 (D24): create() takes these aliases; isDriverAvailable() said no.
+     */
+    public static function availabilityAliases(): array
+    {
+        return [
+            'sqlite3' => ['pdo_sqlite', 'sqlite3'],
+            'postgres' => ['pdo_pgsql', 'postgres'],
+            'postgresql' => ['pdo_pgsql', 'postgresql'],
+            'pdo_pgsql' => ['pdo_pgsql', 'pdo_pgsql'],
+            'pdo-mysql' => ['pdo_mysql', 'pdo-mysql'],
+            'pdo_mysql' => ['pdo_mysql', 'pdo_mysql'],
+            'mysql2' => ['pdo_mysql', 'mysql2'],
+        ];
+    }
+
+    #[DataProvider('availabilityAliases')]
+    public function testAnAliasOfALoadedDriverIsAvailable(string $extension, string $alias): void
+    {
+        if (!extension_loaded($extension)) {
+            $this->markTestSkipped("{$extension} is not loaded");
+        }
+
+        $this->assertTrue(DatabaseFactory::isDriverAvailable($alias));
+        $this->assertTrue(DatabaseFactory::isDriverAvailable(strtoupper($alias)));
+    }
 }
